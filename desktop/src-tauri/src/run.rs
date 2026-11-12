@@ -694,3 +694,110 @@ pub fn run(
     state.eta_sec = 0;
     on_state(state);
 }
+
+#[cfg(test)]
+mod parse_tests {
+    use super::*;
+
+    #[test]
+    fn accepts_string_and_number_coordinates() {
+        let a = serde_json::json!({ "latitude": "29.5330", "longitude": "106.6050" });
+        assert_eq!(as_f64_loose(&a, "latitude"), Some(29.5330));
+        assert_eq!(as_f64_loose(&a, "longitude"), Some(106.6050));
+
+        let b = serde_json::json!({ "latitude": 29.5330, "longitude": 106.6050 });
+        assert_eq!(as_f64_loose(&b, "latitude"), Some(29.5330));
+
+        let c = serde_json::json!({ "latitude": null });
+        assert_eq!(as_f64_loose(&c, "latitude"), None);
+    }
+
+    #[test]
+    fn sports_item_zero_detected_from_number_or_string() {
+        assert_eq!(as_str(&serde_json::json!({"sportsItem": 0}), "sportsItem"), "0");
+        assert_eq!(as_str(&serde_json::json!({"sportsItem": "0"}), "sportsItem"), "0");
+    }
+}
+
+#[cfg(test)]
+mod live_tests {
+    use super::*;
+
+    /// 真实账号联调：设置 XIAOYU_OPENID 后运行
+    ///   cargo test --lib fence_probe -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn fence_probe() {
+        let Ok(openid) = std::env::var("XIAOYU_OPENID") else {
+            println!("未设置 XIAOYU_OPENID，跳过");
+            return;
+        };
+        let mut api = Api::new();
+        api.reset(&openid);
+        let j = api.check_binding(&openid).expect("网络失败");
+        let r = Resp::of(Some(&j));
+        println!("checkBinding ok={} code={} msg={}", r.ok, r.code, r.msg);
+        // 只打印结构，不打印敏感值
+        match &r.data {
+            serde_json::Value::Object(m) => {
+                for (k, v) in m {
+                    let desc = match v {
+                        serde_json::Value::String(s) => format!("String(len={})", s.len()),
+                        serde_json::Value::Object(o) => format!("Object(keys={:?})", o.keys().collect::<Vec<_>>()),
+                        other => format!("{:?}", other).chars().take(40).collect::<String>(),
+                    };
+                    println!("  data.{} = {}", k, desc);
+                }
+            }
+            other => println!("  data 不是对象: {:?}", other),
+        }
+        let token = r.data.get("token").and_then(|v| v.as_str()).unwrap_or("");
+        println!("token 长度 {}", token.len());
+        api.token = token.to_string();
+
+        // 原始响应规模
+        if let Some(pj) = api.get_playground() {
+            let pr = Resp::of(Some(&pj));
+            println!(
+                "getPlayground ok={} 条数={}",
+                pr.ok,
+                pr.data.as_array().map(|a| a.len()).unwrap_or(0)
+            );
+            if let Some(arr) = pr.data.as_array() {
+                for p in arr.iter().take(4) {
+                    println!("   playground: sportsItem={} code={}", as_str(p, "sportsItem"), as_str(p, "placeCode"));
+                }
+            }
+        }
+        if let Some(aj) = api.get_all_area() {
+            let ar = Resp::of(Some(&aj));
+            let n = ar.data.as_array().map(|a| a.len()).unwrap_or(0);
+            println!("getAllArea ok={} 条数={}", ar.ok, n);
+            if let Some(arr) = ar.data.as_array() {
+                for o in arr.iter().take(3) {
+                    let pl = o.get("areaPointList").and_then(|v| v.as_array());
+                    println!(
+                        "   area: func={} code={} 点数={}",
+                        as_str(o, "areaFuncCode"),
+                        as_str(o, "placeCode"),
+                        pl.map(|p| p.len()).unwrap_or(0)
+                    );
+                    if let Some(pts) = pl {
+                        if let Some(first) = pts.first() {
+                            println!("      首点原始 JSON: {}", first);
+                        }
+                    }
+                }
+            }
+        }
+
+        let (areas, logs) = fetch_areas(&mut api);
+        for l in logs {
+            println!("log: {}", l);
+        }
+        println!("最终可用场地 {} 个", areas.len());
+        for a in &areas {
+            println!("   · {} ({}) 顶点 {}", a.place_name, a.place_code, a.fence.len());
+        }
+    }
+}

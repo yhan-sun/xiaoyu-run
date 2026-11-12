@@ -108,10 +108,13 @@ jobs:
           set -e
           SDK="$ANDROID_HOME/build-tools/34.0.0"
           if [ ! -x "$SDK/apksigner" ]; then SDK="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | tail -1)"; fi
-          KS="$HOME/debug.keystore"
-          keytool -genkeypair -v -keystore "$KS" -storepass android -keypass android \
-            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US" > /dev/null 2>&1 || true
+          # 用仓库里固定的 keystore，保证每次构建签名一致 —— 否则每次升级
+          # 都要先卸载旧版（INSTALL_FAILED_UPDATE_INCOMPATIBLE）
+          KS="desktop/.signing/debug.keystore"
+          if [ ! -f "$KS" ]; then
+            echo "缺少签名文件 $KS" >&2
+            exit 1
+          fi
           for f in out/*.apk; do
             if ! "$SDK/apksigner" verify "$f" > /dev/null 2>&1; then
               echo "签名 $f"
