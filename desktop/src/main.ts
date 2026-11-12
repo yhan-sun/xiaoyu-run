@@ -144,6 +144,7 @@ const el = {
   inOpenid: $<HTMLInputElement>("inOpenid"),
   btnConnect: $<HTMLButtonElement>("btnConnect"),
   connectMsg: $("connectMsg"),
+  openidHint: $("openidHint"),
 
   themeSeg: $("themeSeg"),
   inSeed: $<HTMLInputElement>("inSeed"),
@@ -673,6 +674,32 @@ async function runPreview() {
 }
 
 
+
+// ============================================================ OpenID 清洗
+
+/**
+ * 粘贴来的 openid 经常带杂质：换行、空格、引号、`openid=` 前缀，
+ * 甚至整段日志。这里统一洗一遍，避免用户因为看不见的空白反复失败。
+ */
+function sanitizeOpenid(raw: string): string {
+  let v = raw.trim();
+  v = v.replace(/^openid\s*[:=]\s*/i, "");
+  v = v.replace(/^["'`]|["'`]$/g, "");
+  v = v.replace(/\s+/g, "");
+  return v;
+}
+
+/** 微信 openid 通常是 28 位、以 o 开头；不匹配只提示，不拦截。 */
+function openidHintFor(v: string): { text: string; bad: boolean } {
+  if (!v) return { text: "", bad: false };
+  if (v.length < 16) return { text: "长度偏短，确认是否粘贴完整", bad: true };
+  if (!/^[A-Za-z0-9_-]+$/.test(v))
+    return { text: "含非法字符，openid 只应有字母、数字、下划线", bad: true };
+  if (!v.startsWith("o") || v.length !== 28)
+    return { text: `已填入 ${v.length} 位（常见为 28 位且以 o 开头）`, bad: false };
+  return { text: "格式正常", bad: false };
+}
+
 // ============================================================ 电源与防休眠
 
 function renderPower(p: PowerStatus) {
@@ -751,7 +778,8 @@ function applyTheme(mode: string) {
 // ============================================================ 动作
 
 async function doConnect() {
-  const openid = el.inOpenid.value.trim();
+  const openid = sanitizeOpenid(el.inOpenid.value);
+  if (openid !== el.inOpenid.value) el.inOpenid.value = openid;
   if (!openid) {
     toast("请先填入 OpenID", "bad");
     return;
@@ -979,6 +1007,20 @@ async function init() {
     });
 
   // 参数交互
+  el.inOpenid.addEventListener("blur", () => {
+    const clean = sanitizeOpenid(el.inOpenid.value);
+    if (clean !== el.inOpenid.value) el.inOpenid.value = clean;
+    const h = openidHintFor(clean);
+    el.openidHint.textContent = h.text;
+    el.openidHint.style.color = h.bad ? "var(--danger)" : "var(--text-tertiary)";
+    persist();
+  });
+  el.inOpenid.addEventListener("input", () => {
+    const h = openidHintFor(sanitizeOpenid(el.inOpenid.value));
+    el.openidHint.textContent = h.text;
+    el.openidHint.style.color = h.bad ? "var(--danger)" : "var(--text-tertiary)";
+  });
+
   el.inNoise.addEventListener("input", () => {
     el.noiseVal.textContent = Number(el.inNoise.value).toFixed(2);
     schedulePreview();

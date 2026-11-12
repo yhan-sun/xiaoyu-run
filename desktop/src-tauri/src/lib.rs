@@ -665,6 +665,9 @@ fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Tauri 2 的移动端入口：Android/iOS 靠这个宏生成 JNI 符号，
+/// 缺了它 lib*.so 会在 Gradle 的符号校验阶段直接失败。
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(Mutex::new(AppState::default()))
