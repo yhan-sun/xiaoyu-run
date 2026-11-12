@@ -441,7 +441,8 @@ pub fn run(
     state.phase = "生成轨迹".into();
     on_state(state.clone());
 
-    let result = match track::generate(
+    let result = match track::generate_for_place(
+        &area.place_code,
         &area.fence,
         &area.excludes,
         pace_sec_km,
@@ -462,6 +463,9 @@ pub fn run(
     };
 
     let track = &result.points;
+    if result.inferred_standard_track {
+        on_log("跑道采用标准 400m 尺寸和场地坐标估计，非实测跑道线".into());
+    }
     on_log(format!(
         "轨迹 {} 点 · 实测配速 {}/km · {}",
         track.len(),

@@ -534,6 +534,7 @@ export default function App() {
               {preview?.ok
                 ? `${preview.count} 点 · 实测 ${fmtPace(preview.paceSecKm)}`
                 : "未生成轨迹"}
+              {preview?.trackNote ? ` · ${preview.trackNote}` : ""}
             </span>
             {preview && preview.ok && !preview.inWindow && (
               <Tag color="warning" fill="outline">

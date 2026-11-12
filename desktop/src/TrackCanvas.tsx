@@ -127,6 +127,22 @@ export default function TrackCanvas({ preview, running, progress, height = 210 }
       ctx.setLineDash([]);
     }
 
+    // 推算的七条道次参考线，位于轨迹下方。
+    for (const lane of p.trackLanes ?? []) {
+      if (lane.length < 2) continue;
+      ctx.beginPath();
+      lane.forEach(([lat, lon], i) => {
+        const [x, y] = project(lat, lon);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = 0.17;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
     // 全程（未跑部分）
     ctx.beginPath();
     p.points.forEach(([lat, lon], i) => {

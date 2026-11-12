@@ -54,6 +54,8 @@ export interface PreviewResult {
   count: number;
   adjusted: boolean;
   distanceM: number;
+  trackNote: string;
+  trackLanes: [number, number][][];
 }
 
 export interface RunState {

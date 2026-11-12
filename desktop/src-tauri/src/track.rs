@@ -50,6 +50,9 @@ pub struct TrackResult {
     pub window_hi: f64,
     /// 采样点数是否为了压进窗口而被调整过
     pub adjusted: bool,
+    /// 400m standard geometry inferred from a fence, not surveyed lane lines.
+    pub inferred_standard_track: bool,
+    pub track_lanes: Vec<Poly>,
 }
 
 impl TrackResult {
@@ -147,6 +150,8 @@ pub fn generate(
         window_lo: wlo,
         window_hi: whi,
         adjusted,
+        inferred_standard_track: false,
+        track_lanes: Vec::new(),
     })
 }
 
@@ -174,6 +179,202 @@ pub fn distance_of(pts: &[TrackPoint]) -> f64 {
         s += geo::hav(pts[i].lat, pts[i].lon, pts[i + 1].lat, pts[i + 1].lon);
     }
     s
+}
+
+// T1001/T1005 only have fence and exclusion coordinates, not surveyed lanes.
+// Fit standard 400 m geometry around the largest exclusion area and reject the
+// estimate if the first seven lanes cannot be placed inside the permitted area.
+const TRACK_RADIUS_M: f64 = 36.8;
+const TRACK_STRAIGHT_M: f64 = (400.0 - std::f64::consts::TAU * TRACK_RADIUS_M) / 2.0;
+const TRACK_LANE_WIDTH_M: f64 = 1.22;
+const TRACK_LANES: usize = 7;
+
+struct StandardTrack {
+    lat0: f64,
+    lon0: f64,
+    lon_scale: f64,
+    axis: f64,
+    center_u: f64,
+    center_v: f64,
+}
+
+impl StandardTrack {
+    fn ring(&self, offset_m: f64) -> Poly {
+        let radius = TRACK_RADIUS_M + offset_m;
+        let (s, c) = self.axis.sin_cos();
+        let meters_per_degree = geo::R_EARTH * std::f64::consts::PI / 180.0;
+        let mut out = Vec::with_capacity(130);
+        for side in 0..2 {
+            for i in 0..=64 {
+                let a = -std::f64::consts::FRAC_PI_2
+                    + side as f64 * std::f64::consts::PI
+                    + i as f64 * std::f64::consts::PI / 64.0;
+                let u = self.center_u
+                    + if side == 0 { TRACK_STRAIGHT_M / 2.0 } else { -TRACK_STRAIGHT_M / 2.0 }
+                    + radius * a.cos();
+                let v = self.center_v + radius * a.sin();
+                let (x, y) = (u * c - v * s, u * s + v * c);
+                out.push((self.lat0 + y / meters_per_degree, self.lon0 + x / (meters_per_degree * self.lon_scale)));
+            }
+        }
+        out
+    }
+}
+
+fn lane_offset(lane: usize) -> f64 {
+    if lane <= 1 { 0.0 } else { 1.12 + (lane - 2) as f64 * TRACK_LANE_WIDTH_M }
+}
+
+fn fit_standard_track(ctx: &Fence) -> Result<StandardTrack, String> {
+    let (lat0, lon0) = geo::centroid(ctx.fence);
+    let lon_scale = lat0.to_radians().cos().abs().max(0.01);
+    let meters_per_degree = geo::R_EARTH * std::f64::consts::PI / 180.0;
+    let project = |&(lat, lon): &(f64, f64)| {
+        ((lon - lon0) * lon_scale * meters_per_degree, (lat - lat0) * meters_per_degree)
+    };
+    let fence: Vec<_> = ctx.fence.iter().map(project).collect();
+    let bounds = |poly: &[(f64, f64)], axis: f64| {
+        let (s, c) = axis.sin_cos();
+        poly.iter().fold((f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY), |b, &(x, y)| {
+            let (u, v) = (x * c + y * s, -x * s + y * c);
+            (b.0.min(u), b.1.max(u), b.2.min(v), b.3.max(v))
+        })
+    };
+    let mut best: Option<(f64, f64)> = None;
+    for i in 0..fence.len() {
+        let (a, b) = (fence[i], fence[(i + 1) % fence.len()]);
+        let axis = (b.1 - a.1).atan2(b.0 - a.0);
+        let rect = bounds(&fence, axis);
+        let area = (rect.1 - rect.0) * (rect.3 - rect.2);
+        if area > 0.0 && best.map_or(true, |(_, old)| area < old) { best = Some((axis, area)); }
+    }
+    let mut axis = best.ok_or("围栏无法拟合跑道")?.0;
+    let rect = bounds(&fence, axis);
+    if rect.1 - rect.0 < rect.3 - rect.2 { axis += std::f64::consts::FRAC_PI_2; }
+
+    let largest = ctx.excludes.iter().map(|poly| {
+        let p: Vec<_> = poly.iter().map(project).collect();
+        let area = (0..p.len()).map(|i| {
+            let (a, b) = (p[i], p[(i + 1) % p.len()]);
+            a.0 * b.1 - b.0 * a.1
+        }).sum::<f64>().abs();
+        (p, area)
+    }).max_by(|a, b| a.1.total_cmp(&b.1)).ok_or("缺少场地内部参考区域，无法估计跑道位置")?;
+    let inner = bounds(&largest.0, axis);
+    let track = StandardTrack {
+        lat0, lon0, lon_scale, axis,
+        center_u: (inner.0 + inner.1) / 2.0,
+        center_v: (inner.2 + inner.3) / 2.0,
+    };
+    // Validate intermediate offsets too, so changing lanes stays legal. Include
+    // small GPS drift inside lane 1 and outside lane 7.
+    for i in 0..=20 {
+        let offset = -0.4 + i as f64 * ((lane_offset(TRACK_LANES) + 0.8) / 20.0);
+        let ring = track.ring(offset);
+        if densify_poly(&ring, 2.0).iter().any(|&(lat, lon)| !ctx.valid(lat, lon)) {
+            return Err("标准跑道估计位置与围栏或禁跑区冲突，需要校准场地坐标".into());
+        }
+    }
+    Ok(track)
+}
+
+fn lane_plan(n: usize, seed: i64) -> Vec<f64> {
+    let mut rng = Rng::new(seed.wrapping_mul(479).wrapping_add(21));
+    let mut lane = 2 + rng.below((TRACK_LANES - 2) as i32) as usize;
+    let mut plan = vec![lane_offset(lane); n];
+    let mut i = 0;
+    while i < n {
+        let hold = rng.range(65, 125) as usize;
+        i = (i + hold).min(n);
+        if i >= n { break; }
+        let next = if lane == 1 { 2 } else if lane == TRACK_LANES { TRACK_LANES - 1 }
+            else if rng.boolean() { lane + 1 } else { lane - 1 };
+        let duration = rng.range(7, 13) as usize;
+        let from = lane_offset(lane);
+        let to = lane_offset(next);
+        for j in 0..duration.min(n - i) {
+            let t = (j + 1) as f64 / duration as f64;
+            let blend = 0.5 - 0.5 * (std::f64::consts::PI * t).cos();
+            plan[i + j] = from + (to - from) * blend;
+        }
+        i = (i + duration).min(n);
+        lane = next;
+        for value in &mut plan[i..] { *value = to; }
+    }
+    plan
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn generate_for_place(
+    place_code: &str, poly: &[(f64, f64)], excludes: &[Vec<(f64, f64)>],
+    pace_sec_km: f64, target_m: f64, noise: f64, seed: i64,
+    pace_tolerance_sec: f64, burrs: bool,
+) -> Result<TrackResult, String> {
+    if !matches!(place_code, "T1001" | "T1005") {
+        return generate(poly, excludes, pace_sec_km, target_m, noise, seed, pace_tolerance_sec, burrs);
+    }
+    if poly.len() < 3 || pace_sec_km <= 0.0 || target_m <= 0.0 {
+        return Err("场地、配速或距离无效".into());
+    }
+    let fence = dedupe(poly);
+    let bans: Vec<_> = excludes.iter().map(|e| dedupe(e)).filter(|e| e.len() >= 3).collect();
+    let ctx = Fence { fence: &fence, excludes: &bans };
+    let stadium = fit_standard_track(&ctx)?;
+    let ring = stadium.ring(0.0);
+    let (dense, cum) = densify_ring(&ring, 1.0);
+    let (wlo, whi) = pace_window(pace_sec_km, pace_tolerance_sec);
+    let mut n = ((target_m * pace_sec_km / 1000.0).round() as i64).max(2) as usize;
+    let mut adjusted = false;
+    let mut points = Vec::new();
+    let mut pace = 0.0;
+    for _ in 0..MAX_PACE_FIX_ATTEMPTS {
+        let weights = step_weights(n, seed);
+        let lanes = lane_plan(n, seed);
+        let emit = |step: f64| {
+            let mut rng = Rng::new(seed.wrapping_add(91));
+            let mut lateral: f64 = 0.0;
+            let mut forward: f64 = 0.0;
+            let mut travelled = 0.0;
+            let mut coords = Vec::with_capacity(n);
+            for i in 0..n {
+                let (p, heading) = point_at(&dense, &cum, travelled);
+                let intensity = noise.clamp(0.0, 2.0) * if burrs { 1.0 } else { 0.5 };
+                lateral = (0.88 * lateral + rng.uniform(-0.12, 0.12) * intensity).clamp(-0.35, 0.35);
+                forward = (0.82 * forward + rng.uniform(-0.08, 0.08) * intensity).clamp(-0.3, 0.3);
+                let shifted = geo::offset(p.0, p.1, lanes[i] + lateral, (heading + 90.0) % 360.0);
+                let final_point = geo::offset(shifted.0, shifted.1, forward, heading);
+                coords.push(tolerate(p, final_point, &ctx));
+                travelled += step * weights[i];
+            }
+            coords.iter().enumerate().map(|(i, p)| {
+                let j = if i + 1 < n { i + 1 } else { i.saturating_sub(1) };
+                let speed = geo::hav(p.0, p.1, coords[j].0, coords[j].1);
+                let bearing = if i + 1 < n { geo::bearing(p.0, p.1, coords[j].0, coords[j].1) }
+                    else { geo::bearing(coords[j].0, coords[j].1, p.0, p.1) };
+                TrackPoint { lat: p.0, lon: p.1, sec_offset: i as i32,
+                    speed: (speed * 100.0).round() / 100.0, bearing: (bearing * 10.0).round() / 10.0,
+                    accuracy: 5.0 }
+            }).collect::<Vec<_>>()
+        };
+        let mut lo = 0.0;
+        let mut hi = 5.0;
+        while distance_of(&emit(hi)) < target_m && hi < 1e5 { hi *= 1.5; }
+        for _ in 0..44 {
+            let mid = (lo + hi) / 2.0;
+            if distance_of(&emit(mid)) < target_m { lo = mid; } else { hi = mid; }
+        }
+        points = emit((lo + hi) / 2.0);
+        pace = pace_of(&points);
+        if (wlo..=whi).contains(&pace) { break; }
+        if pace <= 0.0 { return Err("无法生成有效跑道轨迹".into()); }
+        let next = ((n as f64 * pace_sec_km / pace).round() as i64).clamp(2, n as i64 * 4 + 8) as usize;
+        if next == n { break; }
+        n = next;
+        adjusted = true;
+    }
+    let track_lanes = (1..=TRACK_LANES).map(|lane| stadium.ring(lane_offset(lane))).collect();
+    Ok(TrackResult { points, pace_sec_km: pace, window_lo: wlo, window_hi: whi, adjusted,
+        inferred_standard_track: true, track_lanes })
 }
 
 /// 15 秒滚动窗口的配速 (最快, 最慢)，秒/公里。
@@ -653,11 +854,11 @@ fn point_at(dense: &[(f64, f64)], cum: &[f64], dist: f64) -> ((f64, f64), f64) {
             hi = mid - 1;
         }
     }
-    let i = lo.min(n.saturating_sub(2));
+    let i = lo.min(n - 1);
     let seg = cum[i + 1] - cum[i];
     let t = if seg <= 0.0 { 0.0 } else { (d - cum[i]) / seg };
     let a = dense[i];
-    let b = dense[i + 1];
+    let b = dense[(i + 1) % n];
     (
         (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t),
         geo::bearing(a.0, a.1, b.0, b.1),
@@ -905,6 +1106,8 @@ fn generate_smooth(
         window_lo: wlo,
         window_hi: whi,
         adjusted,
+        inferred_standard_track: false,
+        track_lanes: Vec::new(),
     }
 }
 
@@ -1155,6 +1358,101 @@ mod tests {
             assert!(track.in_window());
             assert!(track.points.iter().all(|p| ctx.valid(p.lat, p.lon)));
         }
+    }
+
+    fn stadium_fixtures() -> Vec<(&'static str, Poly, Vec<Poly>)> {
+        vec![
+            ("T1005", vec![
+                (29.533933, 106.608884), (29.531893, 106.608970),
+                (29.532019, 106.610646), (29.533979, 106.610558),
+            ], vec![vec![
+                (29.533214, 106.609447), (29.533071, 106.609473),
+                (29.532917, 106.609468), (29.532626, 106.609486),
+                (29.532506, 106.609612), (29.532533, 106.610029),
+                (29.532691, 106.610093), (29.533146, 106.610060),
+                (29.533421, 106.610058), (29.533549, 106.609690),
+                (29.533457, 106.609455),
+            ]]),
+            ("T1001", vec![
+                (29.532692, 106.608105), (29.532871, 106.608176),
+                (29.533363, 106.608104), (29.533592, 106.608107),
+                (29.533707, 106.607374), (29.533713, 106.607166),
+                (29.533627, 106.607020), (29.533197, 106.607033),
+                (29.532749, 106.607017), (29.532289, 106.607043),
+                (29.532065, 106.607032), (29.531956, 106.607445),
+                (29.531947, 106.607814), (29.531952, 106.607986),
+                (29.532145, 106.608111), (29.532466, 106.608101),
+            ], vec![vec![
+                (29.532769, 106.607824), (29.533107, 106.607843),
+                (29.533293, 106.607835), (29.533417, 106.607734),
+                (29.533403, 106.607527), (29.533345, 106.607373),
+                (29.533219, 106.607323), (29.533012, 106.607303),
+                (29.532650, 106.607330), (29.532462, 106.607380),
+                (29.532362, 106.607479), (29.532323, 106.607624),
+                (29.532385, 106.607769), (29.532528, 106.607824),
+                (29.532717, 106.607841),
+            ]]),
+        ]
+    }
+
+    #[test]
+    fn standard_track_has_correct_lane_lengths_at_both_fixtures() {
+        for (code, fence, bans) in stadium_fixtures() {
+            let ctx = Fence { fence: &fence, excludes: &bans };
+            let geometry = fit_standard_track(&ctx).unwrap_or_else(|e| panic!("{code}: {e}"));
+            for (lane, expected) in [(1, 400.0), (2, 407.04), (3, 414.70), (4, 422.37), (7, 445.36)] {
+                let ring = geometry.ring(lane_offset(lane));
+                let (_, cum) = densify_ring(&ring, 1.0);
+                let length = *cum.last().unwrap();
+                assert!((length - expected).abs() < 0.1, "{code} lane {lane}: {length}");
+            }
+        }
+    }
+
+    #[test]
+    fn both_venues_get_legal_standard_tracks_with_lane_changes() {
+        for (code, fence, bans) in stadium_fixtures() {
+            for burrs in [false, true] {
+                for seed in [0, 1, 42, 123, 2026] {
+                    let track = generate_for_place(code, &fence, &bans, 345.0, 2000.0, 0.6, seed, 20.0, burrs)
+                        .unwrap_or_else(|e| panic!("{code}: {e}"));
+                    assert!(track.inferred_standard_track && track.in_window());
+                    assert_eq!(track.track_lanes.len(), 7);
+                    assert!((distance_of(&track.points) - 2000.0).abs() < 1.0);
+                    let ctx = Fence { fence: &fence, excludes: &bans };
+                    assert!(track.points.iter().all(|p| ctx.valid(p.lat, p.lon)));
+                    let max_step = track.points.windows(2)
+                        .map(|w| geo::hav(w[0].lat, w[0].lon, w[1].lat, w[1].lon))
+                        .fold(0.0_f64, f64::max);
+                    assert!(max_step < 10.0, "{code} seed={seed} step={max_step}");
+                }
+            }
+        }
+        let lanes = lane_plan(690, 42);
+        assert!(lanes.iter().any(|&v| (v - lanes[0]).abs() > 1.0));
+        assert!(lanes.windows(2).all(|p| (p[1] - p[0]).abs() < 0.3));
+        assert!(lanes.iter().all(|&p| (0.0..=lane_offset(7)).contains(&p)));
+    }
+
+    #[test]
+    fn standard_track_rejects_missing_or_conflicting_reference_area() {
+        let (_, fence, _) = stadium_fixtures().remove(0);
+        let missing = generate_for_place("T1005", &fence, &[], 345.0, 2000.0, 0.6, 42, 20.0, true);
+        assert!(missing.is_err());
+        let blocked = generate_for_place("T1005", &fence, &[fence.clone()], 345.0, 2000.0, 0.6, 42, 20.0, true);
+        assert!(blocked.is_err());
+    }
+
+    #[test]
+    fn last_ring_segment_interpolates_back_to_start() {
+        let ring = vec![(29.0, 106.0), (29.0, 106.001), (29.001, 106.001), (29.001, 106.0)];
+        let (dense, cum) = densify_ring(&ring, 20.0);
+        let last = *dense.last().unwrap();
+        let first = dense[0];
+        let closing = geo::hav(last.0, last.1, first.0, first.1);
+        let (p, _) = point_at(&dense, &cum, cum.last().unwrap() - closing / 2.0);
+        let midpoint = ((last.0 + first.0) / 2.0, (last.1 + first.1) / 2.0);
+        assert!(geo::hav(p.0, p.1, midpoint.0, midpoint.1) < 0.01);
     }
 
     #[test]

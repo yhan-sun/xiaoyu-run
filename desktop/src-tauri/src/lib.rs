@@ -310,6 +310,8 @@ struct PreviewResult {
     count: usize,
     adjusted: bool,
     distance_m: f64,
+    track_note: String,
+    track_lanes: Vec<Vec<[f64; 2]>>,
 }
 
 /// 实时预览：改配速/距离/毛刺时立刻重算轨迹形状。
@@ -335,6 +337,8 @@ fn preview(
         count: 0,
         adjusted: false,
         distance_m: 0.0,
+        track_note: String::new(),
+        track_lanes: Vec::new(),
     };
 
     let Some(pace_sec) = parse_pace(&pace) else {
@@ -360,7 +364,8 @@ fn preview(
     };
 
     let target = km * 1000.0;
-    match track::generate(
+    match track::generate_for_place(
+        &area.place_code,
         &area.fence,
         &area.excludes,
         pace_sec,
@@ -395,6 +400,14 @@ fn preview(
                 count: res.points.len(),
                 adjusted: res.adjusted,
                 distance_m: track::distance_of(&res.points),
+                track_note: if res.inferred_standard_track {
+                    "标准 400m 跑道估计，非实测线".into()
+                } else {
+                    String::new()
+                },
+                track_lanes: res.track_lanes.iter()
+                    .map(|lane| lane.iter().map(|&(lat, lon)| [lat, lon]).collect())
+                    .collect(),
             }
         }
         Err(e) => PreviewResult {
