@@ -33,7 +33,7 @@ __pycache__/
 venv/
 
 # ─────────── 运行输出（每次跑都不一样）───────────
-run/
+/run/
 
 # ─────────── 隐私：绝对不能进仓库 ───────────
 # 这两个文件里有真实的 openid / 统一认证码 / 学号
@@ -54,3 +54,6 @@ refs/icon/mipmap-*/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 本地调试工具（adb 等），不入库
+.tools/

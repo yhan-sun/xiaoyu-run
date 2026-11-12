@@ -40,8 +40,8 @@ jobs:
       - name: Prepare APK Artifacts
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk dist/XiaoYuRun-v2.0.1-release.apk
-          cp app/build/outputs/apk/debug/app-debug.apk dist/XiaoYuRun-v2.0.1-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk dist/XiaoYuRun-v2.0.2-release.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/XiaoYuRun-v2.0.2-debug.apk
           ls -la dist/
 
       - name: Upload APKs to Artifacts
@@ -55,21 +55,23 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.1
-          name: "小雨run v2.0.1 (稳定修复版)"
+          tag_name: v2.0.2
+          name: "小雨run v2.0.2 (稳定修复版)"
           body: |
-            ### 小雨run v2.0.1 正式发布 🎉
+            ### 小雨run v2.0.2 正式发布 🎉
 
             极简、优雅的校园运动辅助客户端，遵循 Apple 人机交互设计规范（HIG）全新重构。
 
-            #### 本次修复与升级 (v2.0.1)
-            - 🐛 **修复启动闪退**：修正由于 `btnToggleScript`、`tvCredit` 与 `tvScriptPath` ID 未对齐引发的 NullPointerException 闪退问题。
-            - 🎨 **全新 Apple 风格图标**：由蓝色大肥鱼旧标全新升级为「小雨疾驰」极简 Apple 风格矢量应用图标，覆盖所有分辨率。
-            - 🛡️ **动态跑道防空保护**：为 `TrackCanvasView` 增加尺寸校验，防止界面初始测量阶段空指针。
+            #### 本次修复与升级 (v2.0.2)
+            - 🐛 **修复启动闪退**：补齐 `btnToggleScript` / `tvCredit` / `tvScriptPath` 缺失的布局 ID，消除 `onCreate` 阶段的 NullPointerException。
+            - 🩺 **启动异常可视化（新增）**：整个启动流程加了兜底捕获——万一还有异常，不再无声闪退，而是弹框显示并自动把堆栈复制到剪贴板，方便反馈定位。
+            - 🩺 **崩溃自动留档（新增）**：未捕获异常会写入本地 `last_crash.txt`，下次启动自动弹窗展示。
+            - 🎨 **全新 Apple 风格图标**：蓝色渐变 + 极简奔跑几何主体，覆盖全部五档像素密度与自适应图标图层。
+            - 🛡️ **跑道视图防空保护**：`TrackCanvasView` 增加尺寸与周长校验，杜绝测量阶段除零。
 
             #### 下载安装
-            - **[XiaoYuRun-v2.0.1-release.apk](https://github.com/yhan-sun/xiaoyu-run/releases/download/v2.0.1/XiaoYuRun-v2.0.1-release.apk)** (推荐)
-            - **[XiaoYuRun-v2.0.1-debug.apk](https://github.com/yhan-sun/xiaoyu-run/releases/download/v2.0.1/XiaoYuRun-v2.0.1-debug.apk)**
+            - **[XiaoYuRun-v2.0.2-release.apk](https://github.com/yhan-sun/xiaoyu-run/releases/download/v2.0.2/XiaoYuRun-v2.0.2-release.apk)** (推荐)
+            - **[XiaoYuRun-v2.0.2-debug.apk](https://github.com/yhan-sun/xiaoyu-run/releases/download/v2.0.2/XiaoYuRun-v2.0.2-debug.apk)**
           files: dist/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
