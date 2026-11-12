@@ -149,14 +149,14 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.3-android
-          name: "小雨run v3.2.3 · Android"
+          tag_name: v3.2.4-android
+          name: "小雨run v3.2.4 · Android"
           body: |
-            小雨run v3.2.3（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.4（Rust + Tauri 重写）· Android arm64 版
 
             #### 本版更新
-            - 修正每批上传点数，和 2.0.2 一致：每批最多 8 点，批次间共享一个端点。
-            - 太极和风华按标准 400 米跑道尺寸推算七条道次，并允许道次之间平滑过渡。跑道位置依据围栏估计，非实测线。
+            - 结束记录的空 POST 明确发送零长度正文，与旧版 Android 的请求格式对齐；服务器是否接受仍需测试。
+            - 风华参考公开地图调整跑道中心，并调整轨迹漂移；两座场地保留七道，坐标均为估计而非实测。
             - 如果服务端返回 HTTP 403 拦截，结算仍未确认，请以官方小程序为准；此修复能否消除 403 尚需验证。
 
             #### 适用机型

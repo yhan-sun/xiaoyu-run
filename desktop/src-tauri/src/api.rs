@@ -77,7 +77,7 @@ mod http_error_tests {
     }
 
     #[test]
-    fn end_request_uses_bodyless_post() {
+    fn end_request_declares_empty_post_body() {
         use std::io::{Read, Write};
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
@@ -98,7 +98,7 @@ mod http_error_tests {
         assert!(api.call("POST", &format!("http://{address}/end"), None, false).is_some());
         let request = server.join().unwrap().to_ascii_lowercase();
         assert!(request.starts_with("post /end http/1.1\r\n"));
-        assert!(!request.contains("content-length:"));
+        assert!(request.contains("content-length: 0\r\n"));
         assert!(!request.contains("transfer-encoding:"));
     }
 }
@@ -227,6 +227,11 @@ impl Api {
 
         let result = if let Some(b) = body {
             req.send_string(b)
+        } else if method == "POST" {
+            // A bodyless POST still needs explicit zero-length framing. Android
+            // HttpURLConnection uses an empty POST body; ureq::call() is for
+            // requests without body framing (normally GET/HEAD).
+            req.send_bytes(&[])
         } else {
             req.call()
         };

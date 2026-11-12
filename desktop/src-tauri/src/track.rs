@@ -225,7 +225,7 @@ fn lane_offset(lane: usize) -> f64 {
     if lane <= 1 { 0.0 } else { 1.12 + (lane - 2) as f64 * TRACK_LANE_WIDTH_M }
 }
 
-fn fit_standard_track(ctx: &Fence) -> Result<StandardTrack, String> {
+fn fit_standard_track(ctx: &Fence, place_code: Option<&str>) -> Result<StandardTrack, String> {
     let (lat0, lon0) = geo::centroid(ctx.fence);
     let lon_scale = lat0.to_radians().cos().abs().max(0.01);
     let meters_per_degree = geo::R_EARTH * std::f64::consts::PI / 180.0;
@@ -261,11 +261,25 @@ fn fit_standard_track(ctx: &Fence) -> Result<StandardTrack, String> {
         (p, area)
     }).max_by(|a, b| a.1.total_cmp(&b.1)).ok_or("缺少场地内部参考区域，无法估计跑道位置")?;
     let inner = bounds(&largest.0, axis);
-    let track = StandardTrack {
+    let mut track = StandardTrack {
         lat0, lon0, lon_scale, axis,
         center_u: (inner.0 + inner.1) / 2.0,
         center_v: (inner.2 + inner.3) / 2.0,
     };
+    if place_code == Some("T1001") {
+        // Fenghua venue bounding-box centre, OpenStreetMap way 277744172,
+        // converted from WGS-84 to GCJ-02. This is a map estimate, not a survey.
+        // Only use it when it remains close to the live field's reference area.
+        let mapped_center = (29.53277572, 106.60752688);
+        let (x, y) = project(&mapped_center);
+        let (s, c) = axis.sin_cos();
+        let (u, v) = (x * c + y * s, -x * s + y * c);
+        if (u - track.center_u).hypot(v - track.center_v) > 35.0 {
+            return Err("地图参考位置与同步场地不一致，需要重新校准".into());
+        }
+        track.center_u = u;
+        track.center_v = v;
+    }
     // Validate intermediate offsets too, so changing lanes stays legal. Include
     // small GPS drift inside lane 1 and outside lane 7.
     for i in 0..=20 {
@@ -319,7 +333,7 @@ pub fn generate_for_place(
     let fence = dedupe(poly);
     let bans: Vec<_> = excludes.iter().map(|e| dedupe(e)).filter(|e| e.len() >= 3).collect();
     let ctx = Fence { fence: &fence, excludes: &bans };
-    let stadium = fit_standard_track(&ctx)?;
+    let stadium = fit_standard_track(&ctx, Some(place_code))?;
     let ring = stadium.ring(0.0);
     let (dense, cum) = densify_ring(&ring, 1.0);
     let (wlo, whi) = pace_window(pace_sec_km, pace_tolerance_sec);
@@ -339,8 +353,10 @@ pub fn generate_for_place(
             for i in 0..n {
                 let (p, heading) = point_at(&dense, &cum, travelled);
                 let intensity = noise.clamp(0.0, 2.0) * if burrs { 1.0 } else { 0.5 };
-                lateral = (0.88 * lateral + rng.uniform(-0.12, 0.12) * intensity).clamp(-0.35, 0.35);
-                forward = (0.82 * forward + rng.uniform(-0.08, 0.08) * intensity).clamp(-0.3, 0.3);
+                // Bounded correlated GPS drift, distinct from actual lane
+                // changes. This adds modest variation without sudden jumps.
+                lateral = (0.96 * lateral + rng.uniform(-0.55, 0.55) * intensity).clamp(-1.5, 1.5);
+                forward = (0.90 * forward + rng.uniform(-0.22, 0.22) * intensity).clamp(-0.8, 0.8);
                 let shifted = geo::offset(p.0, p.1, lanes[i] + lateral, (heading + 90.0) % 360.0);
                 let final_point = geo::offset(shifted.0, shifted.1, forward, heading);
                 coords.push(tolerate(p, final_point, &ctx));
@@ -1399,7 +1415,7 @@ mod tests {
     fn standard_track_has_correct_lane_lengths_at_both_fixtures() {
         for (code, fence, bans) in stadium_fixtures() {
             let ctx = Fence { fence: &fence, excludes: &bans };
-            let geometry = fit_standard_track(&ctx).unwrap_or_else(|e| panic!("{code}: {e}"));
+            let geometry = fit_standard_track(&ctx, Some(code)).unwrap_or_else(|e| panic!("{code}: {e}"));
             for (lane, expected) in [(1, 400.0), (2, 407.04), (3, 414.70), (4, 422.37), (7, 445.36)] {
                 let ring = geometry.ring(lane_offset(lane));
                 let (_, cum) = densify_ring(&ring, 1.0);
@@ -1407,6 +1423,37 @@ mod tests {
                 assert!((length - expected).abs() < 0.1, "{code} lane {lane}: {length}");
             }
         }
+    }
+
+    #[test]
+    fn fenghua_uses_mapped_center_and_not_exclusion_center() {
+        let (code, fence, bans) = stadium_fixtures().remove(1);
+        let ctx = Fence { fence: &fence, excludes: &bans };
+        let geometry = fit_standard_track(&ctx, Some(code)).unwrap();
+        let (s, c) = geometry.axis.sin_cos();
+        let x = geometry.center_u * c - geometry.center_v * s;
+        let y = geometry.center_u * s + geometry.center_v * c;
+        let meters_per_degree = geo::R_EARTH * std::f64::consts::PI / 180.0;
+        let lat = geometry.lat0 + y / meters_per_degree;
+        let lon = geometry.lon0 + x / (meters_per_degree * geometry.lon_scale);
+        assert!(geo::hav(lat, lon, 29.53277572, 106.60752688) < 0.01);
+    }
+
+    #[test]
+    fn standard_track_noise_changes_the_route_and_stays_repeatable() {
+        let (code, fence, bans) = stadium_fixtures().remove(1);
+        let generate_with_noise = |noise| {
+            generate_for_place(code, &fence, &bans, 345.0, 2000.0, noise, 42, 20.0, true).unwrap()
+        };
+        let clean = generate_with_noise(0.0);
+        let noisy = generate_with_noise(0.6);
+        let again = generate_with_noise(0.6);
+        let max_difference = clean.points.iter().zip(&noisy.points)
+            .map(|(a, b)| geo::hav(a.lat, a.lon, b.lat, b.lon))
+            .fold(0.0_f64, f64::max);
+        assert!(max_difference > 0.5, "GPS jitter has no visible effect");
+        assert_eq!(noisy.points.len(), again.points.len());
+        assert!(noisy.points.iter().zip(&again.points).all(|(a, b)| a.lat == b.lat && a.lon == b.lon));
     }
 
     #[test]

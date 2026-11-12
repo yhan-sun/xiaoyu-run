@@ -401,7 +401,11 @@ fn preview(
                 adjusted: res.adjusted,
                 distance_m: track::distance_of(&res.points),
                 track_note: if res.inferred_standard_track {
-                    "标准 400m 跑道估计，非实测线".into()
+                    if area.place_code == "T1001" {
+                        "标准跑道，位置参考公开地图估计".into()
+                    } else {
+                        "标准 400m 跑道估计，非实测线".into()
+                    }
                 } else {
                     String::new()
                 },
