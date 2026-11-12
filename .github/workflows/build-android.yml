@@ -146,10 +146,15 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.0-android
-          name: "小雨run v3.2.0 · Android"
+          tag_name: v3.2.1-android
+          name: "小雨run v3.2.1 · Android"
           body: |
-            小雨run v3.2.0（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.1（Rust + Tauri 重写）· Android arm64 版
+
+            #### 本版更新
+            - 修正扫码构建配置，内置识别模型；首次使用请允许相机权限。
+            - 停止时请求结算，失败不再显示为成功；优化跑道形状。
+            - 如果服务端返回 HTTP 403 拦截，结算仍未确认，请以官方小程序为准。
 
             #### 适用机型
             仅 arm64（arm64-v8a），覆盖 2016 年后几乎所有安卓手机。
