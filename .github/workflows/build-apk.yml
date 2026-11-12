@@ -3,8 +3,14 @@ name: Build Android APK
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    # v2 的 Kotlin 版只在自身代码变动时才构建，避免每次前端改动都重发旧包
+    paths:
+      - "app/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - "gradle.properties"
+      - ".github/workflows/build-apk.yml"
   workflow_dispatch:
 
 permissions:
