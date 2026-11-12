@@ -20,6 +20,9 @@ const MAX_CACHE_FILE: u64 = 64 * 1024 * 1024;
 #[serde(rename_all = "camelCase")]
 pub struct FoundOpenid {
     pub openid: String,
+    pub student_name: Option<String>,
+    pub student_no: Option<String>,
+    pub unify_id: Option<String>,
     /// 是否来自重邮智慧体育的响应（而非其他小程序）
     pub cqupt: bool,
     /// 命中的缓存文件，便于排查
@@ -198,13 +201,15 @@ fn scan_openids(buf: &[u8]) -> Vec<String> {
         let mut j = i + KEY.len();
         // 跳过 " : = 空白 等分隔符
         while j < buf.len()
-            && matches!(buf[j], b'"' | b'\'' | b':' | b'=' | b' ' | b'\t' | b'\\' | b'/')
+            && matches!(
+                buf[j],
+                b'"' | b'\'' | b':' | b'=' | b' ' | b'\t' | b'\\' | b'/'
+            )
         {
             j += 1;
         }
         let start = j;
-        while j < buf.len()
-            && (buf[j].is_ascii_alphanumeric() || buf[j] == b'_' || buf[j] == b'-')
+        while j < buf.len() && (buf[j].is_ascii_alphanumeric() || buf[j] == b'_' || buf[j] == b'-')
         {
             j += 1;
         }
@@ -223,9 +228,104 @@ fn scan_openids(buf: &[u8]) -> Vec<String> {
 
 fn looks_cqupt(buf: &[u8]) -> bool {
     let needles: [&[u8]; 3] = [b"cqupt", b"checkBinding", b"sportRecord"];
-    needles.iter().any(|n| {
-        buf.windows(n.len()).any(|w| w == *n)
-    })
+    needles
+        .iter()
+        .any(|n| buf.windows(n.len()).any(|w| w == *n))
+}
+
+// 缓存文件包含二进制头，不能将整个文件当 JSON 解析；只解码完整的 JSON 字符串。
+fn json_string_values(buf: &[u8], keys: &[&str]) -> Vec<String> {
+    let mut values = Vec::new();
+    for key in keys {
+        let needle = format!("\"{key}\"");
+        for (pos, _) in buf
+            .windows(needle.len())
+            .enumerate()
+            .filter(|(_, w)| *w == needle.as_bytes())
+        {
+            let mut i = pos + needle.len();
+            while i < buf.len() && buf[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            if buf.get(i) != Some(&b':') {
+                continue;
+            }
+            i += 1;
+            while i < buf.len() && buf[i].is_ascii_whitespace() {
+                i += 1;
+            }
+            if buf.get(i) != Some(&b'"') {
+                continue;
+            }
+            let start = i;
+            i += 1;
+            let mut escaped = false;
+            while i < buf.len() {
+                if !escaped && buf[i] == b'"' {
+                    if let Ok(value) = serde_json::from_slice::<String>(&buf[start..=i]) {
+                        if !value.trim().is_empty() && !values.contains(&value) {
+                            values.push(value);
+                        }
+                    }
+                    break;
+                }
+                if !escaped && buf[i] == b'\\' {
+                    escaped = true;
+                } else {
+                    escaped = false;
+                }
+                i += 1;
+            }
+        }
+    }
+    values
+}
+
+#[derive(Default)]
+struct Metadata {
+    names: Vec<String>,
+    student_nos: Vec<String>,
+    unify_ids: Vec<String>,
+}
+
+impl Metadata {
+    fn collect(&mut self, buf: &[u8]) {
+        for (target, keys) in [
+            (
+                &mut self.names,
+                &["studentName", "username", "createName"][..],
+            ),
+            (&mut self.student_nos, &["studentNo"][..]),
+            (&mut self.unify_ids, &["unifyId"][..]),
+        ] {
+            for value in json_string_values(buf, keys) {
+                if !target.contains(&value) {
+                    target.push(value);
+                }
+            }
+        }
+    }
+
+    fn apply_unique(&self, hit: &mut FoundOpenid) {
+        fn unique(values: &[String]) -> Option<String> {
+            if values.len() == 1 {
+                Some(values[0].clone())
+            } else {
+                None
+            }
+        }
+        hit.student_name = unique(&self.names);
+        hit.student_no = unique(&self.student_nos);
+        hit.unify_id = unique(&self.unify_ids);
+    }
+}
+
+fn associate_profile_metadata(hits: &mut [FoundOpenid], metadata: &Metadata) {
+    if hits.iter().filter(|hit| hit.cqupt).count() == 1 {
+        if let Some(hit) = hits.iter_mut().find(|hit| hit.cqupt) {
+            metadata.apply_unique(hit);
+        }
+    }
 }
 
 pub fn extract() -> ExtractOutcome {
@@ -236,6 +336,8 @@ pub fn extract() -> ExtractOutcome {
 
     for d in &dirs {
         let Ok(rd) = fs::read_dir(d) else { continue };
+        let mut metadata = Metadata::default();
+        let mut profile_hits: Vec<FoundOpenid> = Vec::new();
         for e in rd.flatten() {
             let p = e.path();
             let Ok(meta) = e.metadata() else { continue };
@@ -244,27 +346,42 @@ pub fn extract() -> ExtractOutcome {
             }
             scanned_files += 1;
             let Ok(buf) = fs::read(&p) else { continue };
+            let cqupt = looks_cqupt(&buf);
+            if cqupt {
+                metadata.collect(&buf);
+            }
             if !buf.windows(6).any(|w| w == b"openid") {
                 continue;
             }
-            let cqupt = looks_cqupt(&buf);
             let src = p
                 .parent()
                 .and_then(|x| x.parent())
                 .map(|x| x.display().to_string())
                 .unwrap_or_else(|| p.display().to_string());
-
             for openid in scan_openids(&buf) {
-                if let Some(hit) = found.iter_mut().find(|f| f.openid == openid) {
-                    // 同一 openid 只要有一处来自重邮，就算重邮的
-                    hit.cqupt = hit.cqupt || cqupt;
+                if let Some(hit) = profile_hits.iter_mut().find(|f| f.openid == openid) {
+                    hit.cqupt |= cqupt;
                 } else {
-                    found.push(FoundOpenid {
+                    profile_hits.push(FoundOpenid {
                         openid,
+                        student_name: None,
+                        student_no: None,
+                        unify_id: None,
                         cqupt,
                         source: src.clone(),
                     });
                 }
+            }
+        }
+        // 仅当 profile 中只有一个已确认的重邮 OpenID 时关联资料，避免多账号串号。
+        associate_profile_metadata(&mut profile_hits, &metadata);
+        for hit in profile_hits {
+            if let Some(existing) = found.iter_mut().find(|f| f.openid == hit.openid) {
+                if hit.cqupt && !existing.cqupt {
+                    *existing = hit;
+                }
+            } else {
+                found.push(hit);
             }
         }
     }
@@ -278,15 +395,18 @@ pub fn extract() -> ExtractOutcome {
                 "{denied_dirs} 个微信目录没有读取权限。macOS 需要在「系统设置 → 隐私与安全性 → 完全磁盘访问权限」里勾选小雨run，然后再点一次扫描。"
             )
         } else if scanned_dirs == 0 {
-            "没找到微信缓存目录。请确认电脑版微信已安装，并至少打开过一次「重邮智慧体育」小程序。".into()
+            "没找到微信缓存目录。请确认电脑版微信已安装，并至少打开过一次「重邮智慧体育」小程序。"
+                .into()
         } else {
             format!(
                 "扫描了 {scanned_dirs} 个缓存目录、{scanned_files} 个文件，没有找到 openid。请在电脑微信里打开一次「重邮智慧体育」小程序并完成绑定后再试。"
             )
         }
     } else {
-        format!("扫描 {scanned_dirs} 个缓存目录、{scanned_files} 个文件，找到 {} 个身份。",
-            found.len())
+        format!(
+            "扫描 {scanned_dirs} 个缓存目录、{scanned_files} 个文件，找到 {} 个身份。",
+            found.len()
+        )
     };
 
     ExtractOutcome {
@@ -323,8 +443,9 @@ pub fn qr_svg(data: &str, size_px: u32) -> Option<String> {
         }
     }
 
+    let view_width = width + 8;
     Some(format!(
-        r##"<svg xmlns="http://www.w3.org/2000/svg" width="{size_px}" height="{size_px}" viewBox="0 0 {width} {width}" shape-rendering="crispEdges"><rect width="{width}" height="{width}" fill="#fff"/><path d="{d}" fill="#000"/></svg>"##
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="{size_px}" height="{size_px}" viewBox="-4 -4 {view_width} {view_width}" shape-rendering="crispEdges"><rect x="-4" y="-4" width="{view_width}" height="{view_width}" fill="#fff"/><path d="{d}" fill="#000"/></svg>"##
     ))
 }
 
@@ -334,7 +455,8 @@ mod tests {
 
     #[test]
     fn parses_json_and_query_forms() {
-        let buf = br#"{"code":"10200","data":{"openid":"oABC123456789012345678901234","isBind":"true"}}"#;
+        let buf =
+            br#"{"code":"10200","data":{"openid":"oABC123456789012345678901234","isBind":"true"}}"#;
         let ids = scan_openids(buf);
         assert_eq!(ids, vec!["oABC123456789012345678901234".to_string()]);
 
@@ -347,6 +469,34 @@ mod tests {
     fn ignores_short_or_empty() {
         assert!(scan_openids(b"\"openid\":\"\"").is_empty());
         assert!(scan_openids(b"\"openid\":\"abc\"").is_empty());
+    }
+
+    #[test]
+    fn associates_unique_profile_metadata_without_guessing() {
+        let mut metadata = Metadata::default();
+        metadata.collect(b"binary\x00cqupt {\"studentName\":\"\\u5c0f\\u96e8\",\"studentNo\":\"20230001\",\"unifyId\":\"1234567\"}");
+        let hit = |openid: &str, cqupt| FoundOpenid {
+            openid: openid.into(),
+            student_name: None,
+            student_no: None,
+            unify_id: None,
+            cqupt,
+            source: String::new(),
+        };
+        let mut hits = vec![hit("o1234567", true), hit("o7654321", false)];
+        associate_profile_metadata(&mut hits, &metadata);
+        assert_eq!(hits[0].student_name.as_deref(), Some("小雨"));
+        assert_eq!(hits[0].student_no.as_deref(), Some("20230001"));
+        assert_eq!(hits[0].unify_id.as_deref(), Some("1234567"));
+        assert!(hits[1].student_name.is_none());
+
+        let mut ambiguous = vec![hit("o1234567", true), hit("o7654321", true)];
+        associate_profile_metadata(&mut ambiguous, &metadata);
+        assert!(ambiguous.iter().all(|item| item.student_no.is_none()));
+        metadata.collect(br#"{"studentNo":"20230002"}"#);
+        let mut conflicting = vec![hit("o1234567", true)];
+        associate_profile_metadata(&mut conflicting, &metadata);
+        assert!(conflicting[0].student_no.is_none());
     }
 
     #[test]

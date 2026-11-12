@@ -138,6 +138,17 @@
         text-transform: uppercase;
         color: var(--weak);
       }
+      .identity {
+        display: grid;
+        gap: 8px;
+      }
+      .identity-value {
+        margin-top: 2px;
+        font-size: 12.5px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+        user-select: text;
+      }
       .openid {
         margin-top: 3px;
         font-family: "SF Mono", ui-monospace, Consolas, monospace;
@@ -201,9 +212,12 @@
           <div class="qr-wrap">
             <div class="qr" id="qr"></div>
             <div class="qr-side">
-              <div class="label">OpenID</div>
-              <div class="openid" id="openid">—</div>
-              <div class="hint" id="source"></div>
+              <div class="identity">
+                <div><div class="label">姓名</div><div class="identity-value" id="studentName">—</div></div>
+                <div><div class="label">学号</div><div class="identity-value" id="studentNo">—</div></div>
+                <div><div class="label">统一认证码</div><div class="identity-value" id="unifyId">—</div></div>
+                <div><div class="label">OpenID</div><div class="openid" id="openid">—</div></div>
+              </div>
             </div>
           </div>
           <div class="row">
@@ -221,23 +235,12 @@
     <script>
       const invoke = window.__TAURI__.core.invoke;
 
-      // 首帧画完再显示窗口，避免白屏等待
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.__TAURI__.window
-            .getCurrentWindow()
-            .show()
-            .catch(() => {});
-        });
-      });
-
       const $ = (id) => document.getElementById(id);
       const btnGet = $("btnGet");
       const hint = $("hint");
       const result = $("result");
       const qrBox = $("qr");
       const openidEl = $("openid");
-      const sourceEl = $("source");
 
       let current = "";
 
@@ -250,6 +253,9 @@
         btnGet.disabled = true;
         btnGet.textContent = "扫描中 …";
         setHint("正在读取本机微信缓存 …");
+        hint.classList.remove("hidden");
+        result.classList.add("hidden");
+        $("btnPrivacy")?.remove();
 
         try {
           const res = await invoke("extract_openid");
@@ -269,13 +275,18 @@
 
           current = hit.openid;
           openidEl.textContent = hit.openid;
+          $("studentName").textContent = hit.studentName || "未找到";
+          $("studentNo").textContent = hit.studentNo || "未找到";
+          $("unifyId").textContent = hit.unifyId || "未找到";
           qrBox.innerHTML = res.qr || "";
-          sourceEl.textContent = hit.cqupt
-            ? "✓ 来自重邮智慧体育的缓存"
-            : "⚠ 这条不属于重邮智慧体育";
-          sourceEl.className = "hint " + (hit.cqupt ? "ok" : "warn");
           result.classList.remove("hidden");
-          setHint(`扫描 ${res.scannedDirs} 个目录、${res.scannedFiles} 个文件`);
+          if (!res.qr) {
+            setHint("二维码生成失败，请复制 OpenID 使用。", "warn");
+          } else if (!hit.cqupt) {
+            setHint("未能确认该 OpenID 属于重邮智慧体育，请核实后使用。", "warn");
+          } else {
+            hint.classList.add("hidden");
+          }
         } catch (e) {
           setHint("出错了：" + String(e), "bad");
         } finally {
@@ -299,7 +310,12 @@
       $("btnAgain").onclick = get;
       $("btnCopy").onclick = async () => {
         if (!current) return;
-        await invoke("copy_text", { text: current });
+        const copied = await invoke("copy_text", { text: current });
+        if (!copied) {
+          hint.classList.remove("hidden");
+          setHint("复制失败，请手动选择 OpenID 复制。", "warn");
+          return;
+        }
         const old = $("btnCopy").textContent;
         $("btnCopy").textContent = "已复制";
         setTimeout(() => ($("btnCopy").textContent = old), 1200);
