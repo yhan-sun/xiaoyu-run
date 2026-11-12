@@ -23,6 +23,8 @@ captures/
 # 里面是本机的 SDK 路径，不该进仓库
 local.properties
 *.keystore
+# 例外：CI 需要固定签名，否则每次升级都要先卸载
+!desktop/.signing/debug.keystore
 *.jks
 
 # ─────────── Python ───────────
