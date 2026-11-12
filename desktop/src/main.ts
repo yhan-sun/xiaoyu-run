@@ -138,8 +138,6 @@ const el = {
 
   themeSeg: $("themeSeg"),
   inSeed: $<HTMLInputElement>("inSeed"),
-  verText: $("verText"),
-  btnCopyRepo: $<HTMLButtonElement>("btnCopyRepo"),
   btnReset: $<HTMLButtonElement>("btnReset"),
 
   toastHost: $("toastHost"),
@@ -838,14 +836,6 @@ async function init() {
   el.btnCancel.addEventListener("click", doCancel);
   el.btnConnect.addEventListener("click", doConnect);
   el.btnRefresh.addEventListener("click", doStats);
-  el.btnCopyRepo.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText("https://github.com/yhan-sun/xiaoyu-run");
-      toast("链接已复制", "ok");
-    } catch {
-      toast("复制失败", "bad");
-    }
-  });
   el.btnReset.addEventListener("click", async () => {
     if (!state.config) return;
     state.config = {
@@ -897,9 +887,6 @@ async function init() {
   el.swBurrs.setAttribute("aria-checked", String(state.config.burrs ?? true));
 
   applyTheme(state.config.theme ?? "system");
-
-  const ver = await call<string>("app_version");
-  if (ver) el.verText.textContent = `v${ver}`;
 
   renderPlaceOptions();
   drawCanvas();
