@@ -41,7 +41,9 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          # 只保留 arm64：覆盖 2016 年之后几乎所有安卓手机，
+          # 交叉编译时间降到原来的约 1/4
+          targets: aarch64-linux-android
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -92,7 +94,7 @@ jobs:
 
       - name: Build APK
         working-directory: desktop
-        run: npx tauri android build --apk
+        run: npx tauri android build --apk --target aarch64
 
       - name: Collect artifacts
         run: |
@@ -136,7 +138,10 @@ jobs:
           tag_name: v3.0.0-android
           name: "小雨run v3.0.0 · Android"
           body: |
-            小雨run v3.0.0（Rust + Tauri 重写）· Android 版
+            小雨run v3.0.0（Rust + Tauri 重写）· Android arm64 版
+
+            #### 适用机型
+            仅 arm64（arm64-v8a），覆盖 2016 年后几乎所有安卓手机。
 
             #### 安装
             下载下方 APK，传到手机安装。首次安装需允许「安装未知来源应用」。

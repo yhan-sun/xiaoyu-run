@@ -13,7 +13,7 @@
 | 部件 | 平台 | 干什么 | 下载 |
 |---|---|---|---|
 | **电脑端** | Windows / macOS | 读本机微信缓存 → 提取 OpenID → 显示二维码 | [Windows EXE](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) |
-| **手机端** | Android 7.0+ | 扫码或输入 → 生成轨迹 → 打卡 | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-android) |
+| **手机端** | Android 7.0+ · arm64 | 扫码或输入 → 生成轨迹 → 打卡 | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-android) |
 
 **为什么必须分成两半**：微信把小程序数据放在手机的应用私有目录
 （`/data/data/com.tencent.mm`），未 root 的手机读不到 —— 这是 Android 沙箱，不是工具问题。
@@ -31,6 +31,8 @@
 
 > **macOS 提示无权限**：系统设置 → 隐私与安全性 → **完全磁盘访问权限**，
 > 勾选小雨run，再回来重新扫描。读别的应用的沙箱容器必须给这个权限。
+
+> 手机端只提供 **arm64（arm64-v8a）** 包，覆盖 2016 年之后几乎所有安卓机型。
 
 ### 2. 手机端导入
 
