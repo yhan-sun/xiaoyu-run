@@ -77,6 +77,21 @@ interface Stats {
   rows: StatRow[];
 }
 
+interface FoundOpenid {
+  openid: string;
+  cqupt: boolean;
+  source: string;
+}
+
+interface ExtractResult {
+  found: FoundOpenid[];
+  note: string;
+  scannedDirs: number;
+  scannedFiles: number;
+  deniedDirs: number;
+  qr: string | null;
+}
+
 interface PowerStatus {
   platform: string;
   caffeinate: boolean;
@@ -143,8 +158,15 @@ const el = {
 
   inOpenid: $<HTMLInputElement>("inOpenid"),
   btnConnect: $<HTMLButtonElement>("btnConnect"),
+  btnScanQr: $<HTMLButtonElement>("btnScanQr"),
   connectMsg: $("connectMsg"),
   openidHint: $("openidHint"),
+
+  qrBox: $("qrBox"),
+  qrId: $("qrId"),
+  extractNote: $("extractNote"),
+  btnScan: $<HTMLButtonElement>("btnScan"),
+  btnCopyId: $<HTMLButtonElement>("btnCopyId"),
 
   themeSeg: $("themeSeg"),
   inSeed: $<HTMLInputElement>("inSeed"),
@@ -700,6 +722,90 @@ function openidHintFor(v: string): { text: string; bad: boolean } {
   return { text: "格式正常", bad: false };
 }
 
+
+// ============================================================ 提取 OpenID
+
+let lastOpenid = "";
+
+async function doScan() {
+  el.btnScan.disabled = true;
+  el.btnScan.textContent = "扫描中 …";
+  const res = await call<ExtractResult>("extract_openid");
+  el.btnScan.disabled = false;
+  el.btnScan.textContent = "重新扫描";
+  if (!res) return;
+
+  el.extractNote.textContent = res.note;
+  el.extractNote.style.color = res.deniedDirs > 0 ? "var(--warning)" : "";
+
+  if (res.deniedDirs > 0 && res.found.length === 0) {
+    el.qrBox.innerHTML =
+      '<div class="qr-empty">需要「完全磁盘访问权限」<br>才能读取微信缓存</div>';
+    el.qrId.textContent = "—";
+    lastOpenid = "";
+    if (!document.getElementById("btnGrant")) {
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.id = "btnGrant";
+      b.textContent = "打开系统设置授权";
+      b.style.marginTop = "10px";
+      b.addEventListener("click", () => {
+        void call<boolean>("open_privacy_settings");
+        toast("找到「小雨run」，打开开关后回到这里重新扫描", "ok");
+      });
+      el.extractNote.after(b);
+    }
+    return;
+  }
+
+  const hit = res.found.find((f) => f.cqupt) ?? res.found[0];
+  if (!hit) {
+    el.qrBox.innerHTML = '<div class="qr-empty">未找到 OpenID</div>';
+    el.qrId.textContent = "—";
+    lastOpenid = "";
+    return;
+  }
+
+  lastOpenid = hit.openid;
+  el.qrId.textContent = hit.openid;
+  el.qrBox.innerHTML = res.qr ?? '<div class="qr-empty">二维码生成失败</div>';
+
+  if (hit.cqupt) {
+    el.extractNote.textContent = `✓ 来自重邮智慧体育的缓存（${res.scannedFiles} 个文件）`;
+    el.extractNote.style.color = "var(--success)";
+  } else {
+    el.extractNote.textContent = `⚠ 这条不属于重邮智慧体育，可能来自别的小程序`;
+    el.extractNote.style.color = "var(--warning)";
+  }
+}
+
+
+/** 手机端扫码导入：扫电脑端生成的二维码，内容就是 openid 原文。 */
+async function doScanQr() {
+  try {
+    const mod = await import("@tauri-apps/plugin-barcode-scanner");
+    const res = await mod.scan({
+      windowed: true,
+      formats: [mod.Format.QRCode],
+    });
+    const raw = typeof res === "string" ? res : res?.content ?? "";
+    const clean = sanitizeOpenid(raw);
+    if (!clean) {
+      toast("二维码里没有有效内容", "bad");
+      return;
+    }
+    el.inOpenid.value = clean;
+    const h = openidHintFor(clean);
+    el.openidHint.textContent = h.text || "已扫码填入";
+    el.openidHint.style.color = h.bad ? "var(--danger)" : "var(--success)";
+    if (state.config) state.config.openid = clean;
+    persist();
+    toast("已扫码填入，请点「保存并同步场地」", "ok");
+  } catch (e) {
+    toast(`扫码失败：${String(e)}`, "bad");
+  }
+}
+
 // ============================================================ 电源与防休眠
 
 function renderPower(p: PowerStatus) {
@@ -973,6 +1079,7 @@ function switchPage(name: string) {
     stats: "成绩",
     guide: "指南",
     settings: "设置",
+    extract: "提取 OpenID",
   };
   el.pageTitle.textContent = titles[name] ?? "小雨run";
 
@@ -1055,6 +1162,21 @@ async function init() {
     persist();
     toast(!on ? "打卡时将阻止系统休眠" : "已关闭防休眠", !on ? "ok" : "");
   });
+  el.btnScan.addEventListener("click", doScan);
+  el.btnScanQr.addEventListener("click", doScanQr);
+  el.btnCopyId.addEventListener("click", async () => {
+    if (!lastOpenid) {
+      toast("还没有扫描到 OpenID", "bad");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(lastOpenid);
+      toast("OpenID 已复制", "ok");
+    } catch {
+      toast("复制失败，请手动选中", "bad");
+    }
+  });
+
   el.btnPowerCheck.addEventListener("click", async () => {
     el.btnPowerCheck.disabled = true;
     await refreshPower();
@@ -1179,7 +1301,11 @@ async function init() {
     }
   }
 
-  switchPage("run");
+  // 桌面端且还没配置 openid 时，直接落到提取页
+  const isDesktop = window.innerWidth >= 900;
+  el.btnScanQr.classList.toggle("hide", isDesktop);
+  switchPage(isDesktop && !state.config.openid ? "extract" : "run");
+  if (isDesktop && !state.config.openid) void doScan();
 
   // 等一帧让布局稳定后再回传度量
   window.setTimeout(() => sendProbe(performance.now()), 400);

@@ -661,6 +661,56 @@ fn make_spurs(n: usize, seed: i64, intensity: f64) -> Spurs {
         }
     }
 
+    // ---- 变道：真实跑者会在一段时间里保持某条跑道，然后换到另一条 ----
+    // 形态是「保持 → S 形过渡（3~6 秒）→ 保持」，和来回鼓包完全不同。
+    //
+    // 先算出逐点的横向计划，再一次性加进去：
+    // 早期版本在循环里直接 `lateral[idx] += ...` 且用 `.min(n-1)` 钳位，
+    // 尾段多个 k 会落到同一个索引上重复累加，数值直接爆掉 —— 那就是尖刺的来源。
+    let mut plan = vec![0.0f64; n];
+    let mut cur = 0.0f64;
+    let mut i = 0usize;
+    while i < n {
+        let hold = rnd.range(30, 80) as usize;
+        let end = (i + hold).min(n);
+        for v in plan.iter_mut().take(end).skip(i) {
+            *v = cur;
+        }
+        i = end;
+        if i >= n {
+            break;
+        }
+        // 换到另一条道：约 1.2 ~ 3.6 米（一条跑道宽约 1.22 米）
+        let target = rnd.uniform(1.2, 3.6) * intensity * rnd.sign();
+        let dur = rnd.range(3, 7) as usize;
+        // 换道是 0→1 的单调阶跃，用半周期余弦；
+        // 用整周期（TAU）会变成"上去再回来"，末尾突然跳到目标值 —— 那就是尖刺。
+        for k in 0..=dur {
+            let idx = i + k;
+            if idx >= n {
+                break;
+            }
+            let u = k as f64 / dur as f64;
+            let s_curve = 0.5 - 0.5 * (std::f64::consts::PI * u).cos();
+            plan[idx] = cur + (target - cur) * s_curve;
+        }
+        cur = target;
+        i = (i + dur).min(n);
+    }
+
+    // 闭环处理：环线首尾相接，若两端偏移不同会在起跑线处留一道缝。
+    // 用一条贯穿全程的线性斜坡把缝抹平（等价于极缓慢的横向游移）。
+    if n > 1 {
+        let seam = plan[0] - plan[n - 1];
+        for k in 0..n {
+            plan[k] += seam * (k as f64 / (n - 1) as f64);
+        }
+    }
+
+    for k in 0..n {
+        lateral[k] += plan[k];
+    }
+
     Spurs { lateral, forward }
 }
 

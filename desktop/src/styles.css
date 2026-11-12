@@ -1475,3 +1475,69 @@ code,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------- 提取页二维码 ---------------- */
+
+.qr-wrap {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+}
+
+.qr-box {
+  width: 188px;
+  height: 188px;
+  flex: 0 0 188px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.qr-box svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qr-empty {
+  color: #9a9ea6;
+  font-size: 11.5px;
+  text-align: center;
+  padding: 0 12px;
+  line-height: 1.5;
+}
+
+.qr-side {
+  flex: 1;
+  min-width: 0;
+}
+
+.qr-id {
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-all;
+  user-select: text;
+  -webkit-user-select: text;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text);
+}
+
+@media (max-width: 899px) {
+  .qr-wrap {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .qr-box {
+    flex: 0 0 auto;
+  }
+  .qr-side {
+    width: 100%;
+  }
+}

@@ -35,6 +35,19 @@
         </div>
 
         <nav class="nav">
+          <div class="nav-section">开始</div>
+
+          <button class="nav-item" data-page="extract">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.4" />
+              <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.4" />
+              <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.4" />
+              <path d="M14 14h3v3h-3zM20.5 14v6.5H14" />
+            </svg>
+            提取 OpenID
+          </button>
+
           <div class="nav-section">里程</div>
 
           <button class="nav-item active" data-page="run">
@@ -101,6 +114,62 @@
         </header>
 
         <div class="scroll">
+
+          <!-- ------------------------- 提取 OpenID ------------------------- -->
+          <section class="page" id="page-extract">
+            <div class="section-label">本机微信身份</div>
+
+            <div class="card">
+              <div class="qr-wrap">
+                <div class="qr-box" id="qrBox">
+                  <div class="qr-empty">尚未扫描</div>
+                </div>
+                <div class="qr-side">
+                  <div class="metric-key">OpenID</div>
+                  <div class="qr-id mono" id="qrId">—</div>
+                  <div class="tiny" id="extractNote" style="margin-top: 8px">
+                    点下方「扫描本机微信」读取缓存
+                  </div>
+                  <div class="row gap-8" style="margin-top: 14px">
+                    <button class="btn btn-primary" id="btnScan">扫描本机微信</button>
+                    <button class="btn" id="btnCopyId">复制</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-label">手机上怎么用</div>
+
+            <div class="card">
+              <div class="steps">
+                <div class="step">
+                  <div class="step-num">1</div>
+                  <div class="step-body">
+                    <div class="step-title">手机打开小雨run</div>
+                    <div class="step-desc">进入「指南」页，点「扫码导入」对准左侧二维码即可自动填入。</div>
+                  </div>
+                </div>
+                <div class="step">
+                  <div class="step-num">2</div>
+                  <div class="step-body">
+                    <div class="step-title">或者直接输入</div>
+                    <div class="step-desc">把上方 OpenID 复制发到手机，粘贴进输入框。只需要做一次，之后会一直保存。</div>
+                  </div>
+                </div>
+                <div class="step">
+                  <div class="step-num">3</div>
+                  <div class="step-body">
+                    <div class="step-title">为什么手机不能自己取</div>
+                    <div class="step-desc">
+                      微信把小程序数据放在应用私有目录（<code>/data/data/com.tencent.mm</code>），
+                      未 root 的手机读不到，系统沙箱不允许。电脑版微信的缓存是明文，所以只能在电脑上取。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- ------------------------- 运动 ------------------------- -->
           <section class="page active" id="page-run">
             <div class="section-label">当前进度</div>
@@ -299,9 +368,19 @@
               </div>
               <div class="tiny" id="openidHint" style="margin-top: 6px"></div>
 
-              <button class="btn btn-primary btn-block mt-12" id="btnConnect">
-                保存并同步场地
-              </button>
+              <div class="row gap-8 mt-12">
+                <button class="btn btn-primary grow" id="btnConnect">
+                  保存并同步场地
+                </button>
+                <button class="btn hide" id="btnScanQr" title="扫描电脑端二维码">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+                    <path d="M4 12h16" />
+                  </svg>
+                  扫码
+                </button>
+              </div>
               <div class="tiny mt-8" id="connectMsg"></div>
             </div>
 

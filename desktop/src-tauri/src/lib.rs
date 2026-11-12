@@ -3,6 +3,7 @@
 //! 前端只负责呈现，所有网络与轨迹计算都在 Rust 侧完成。
 
 mod api;
+mod extract;
 mod geo;
 mod rng;
 mod run;
@@ -684,6 +685,58 @@ fn take_imported_openid() -> Option<String> {
     None
 }
 
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtractResult {
+    found: Vec<extract::FoundOpenid>,
+    note: String,
+    scanned_dirs: usize,
+    scanned_files: usize,
+    denied_dirs: usize,
+    qr: Option<String>,
+}
+
+/// 扫描本机微信缓存，提取 openid，并给出该 openid 的二维码。
+#[tauri::command]
+fn extract_openid() -> ExtractResult {
+    let out = extract::extract();
+    let qr = out
+        .found
+        .iter()
+        .find(|f| f.cqupt)
+        .or_else(|| out.found.first())
+        .and_then(|f| extract::qr_svg(&f.openid, 300));
+    ExtractResult {
+        found: out.found,
+        note: out.note,
+        scanned_dirs: out.scanned_dirs,
+        scanned_files: out.scanned_files,
+        denied_dirs: out.denied_dirs,
+        qr,
+    }
+}
+
+/// 为任意文本生成二维码（手机扫码导入用）。
+#[tauri::command]
+fn make_qr(text: String, size: u32) -> Option<String> {
+    extract::qr_svg(&text, size.clamp(120, 1024))
+}
+
+
+/// 打开 macOS「完全磁盘访问权限」设置页。
+/// 读别的应用沙箱容器必须授予该权限，否则缓存目录一律 EPERM。
+#[tauri::command]
+fn open_privacy_settings() -> bool {
+    if cfg!(target_os = "macos") {
+        return std::process::Command::new("open")
+            .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
+            .spawn()
+            .is_ok();
+    }
+    false
+}
+
 #[tauri::command]
 fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
@@ -693,7 +746,13 @@ fn app_version() -> String {
 /// 缺了它 lib*.so 会在 Gradle 的符号校验阶段直接失败。
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // 扫码插件只存在于移动端（crate 内部 #![cfg(mobile)]），桌面端不能注册
+    #[cfg(mobile)]
+    let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+
+    builder
         .manage(Mutex::new(AppState::default()))
         .manage(Runner::default())
         .invoke_handler(tauri::generate_handler![
@@ -706,6 +765,9 @@ pub fn run() {
             get_stats,
             power_status,
             take_imported_openid,
+            extract_openid,
+            make_qr,
+            open_privacy_settings,
             ui_probe,
             app_version
         ])
