@@ -14,10 +14,10 @@ text, count = re.subn(pattern, r'\1optimization {\n                enable = fals
 if count != 1:
     raise SystemExit("Unsupported Tauri Android release template; inspect optimization settings")
 
-# The upstream scanner uses the Play Services downloaded model. Substitute the
-# bundled equivalent so scanning works without Play Services or a model download.
+# The upstream scanner uses the Play Services downloaded model. Use the bundled
+# equivalent so scanning works without Play Services or a model download.
 marker = "// XiaoYuRun: use the bundled ML Kit barcode model"
 if marker not in text:
-    text += '''\n\n// XiaoYuRun: use the bundled ML Kit barcode model\nconfigurations.configureEach {\n    resolutionStrategy.dependencySubstitution {\n        substitute(module("com.google.android.gms:play-services-mlkit-barcode-scanning"))\n            .using(module("com.google.mlkit:barcode-scanning:17.3.0"))\n    }\n}\n'''
+    text += '''\n\n// XiaoYuRun: use the bundled ML Kit barcode model\nconfigurations.configureEach {\n    exclude(group = "com.google.android.gms", module = "play-services-mlkit-barcode-scanning")\n}\ndependencies {\n    implementation("com.google.mlkit:barcode-scanning:17.3.0")\n}\n'''
 path.write_text(text, encoding="utf-8")
 print(f"Configured release optimization and bundled barcode model: {path}")
