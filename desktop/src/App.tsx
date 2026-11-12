@@ -347,14 +347,18 @@ export default function App() {
     try {
       const mod = await import("@tauri-apps/plugin-barcode-scanner");
 
-      // 安卓必须运行时授予相机权限，否则插件会直接抛错
-      const perm = await mod.checkPermissions();
-      if (perm !== "granted") {
-        const asked = await mod.requestPermissions();
-        if (asked !== "granted") {
-          Toast.show({ icon: "fail", content: "没有相机权限，请在系统设置里允许" });
-          return;
+      // 能查就查，查不到（旧版插件没实现）就直接去扫
+      try {
+        const perm = await mod.checkPermissions();
+        if (perm !== "granted") {
+          const asked = await mod.requestPermissions();
+          if (asked !== "granted") {
+            Toast.show({ icon: "fail", content: "没有相机权限，请在系统设置里允许" });
+            return;
+          }
         }
+      } catch {
+        /* 忽略，交给 scan 自己处理 */
       }
 
       const res = await mod.scan({ windowed: true, formats: [mod.Format.QRCode] });
