@@ -463,3 +463,62 @@ body {
 .group .adm-list-item {
   background: var(--adm-color-box);
 }
+
+/* 按钮堆叠：每个占满整行，扫码不会被挤掉 */
+.btn-stack {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-stack .adm-button {
+  --border-radius: 11px;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 560;
+}
+
+.btn-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn-line svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ver {
+  font-variant-numeric: tabular-nums;
+  color: var(--adm-color-weak);
+  font-size: 12.5px;
+}
+
+/* 排版微调：字号与留白再放宽一点 */
+.adm-card-body {
+  padding: 18px;
+}
+
+.hero-num {
+  font-size: 50px;
+}
+
+.metric-value {
+  font-size: 16px;
+}
+
+.metric-label {
+  letter-spacing: 0.03em;
+}
+
+/* 次级按钮：描边结构，杜绝"灰底灰白卡"看不出是按钮 */
+.adm-button-fill-outline.adm-button-color-primary {
+  --border-color: var(--adm-color-primary);
+  --text-color: var(--adm-color-primary);
+  border-width: 1px;
+}
+
+.btn-stack .adm-button-fill-outline {
+  background: transparent;
+}

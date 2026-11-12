@@ -115,6 +115,7 @@ export default function App() {
   const [extract, setExtract] = useState<ExtractResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [openidText, setOpenidText] = useState("");
+  const [version, setVersion] = useState("3.1.0");
 
   const loadedRef = useRef(false);
   const saveTimer = useRef(0);
@@ -239,6 +240,12 @@ export default function App() {
   useEffect(() => {
     if (!isTauri) return;
     void (async () => {
+      try {
+        const v = await call<string>("app_version");
+        if (v) setVersion(v);
+      } catch {
+        /* ignore */
+      }
       try {
         const p = await call<PowerStatus>("power_status");
         if (p) setPower(p);
@@ -405,6 +412,18 @@ export default function App() {
             return { w: Math.round(r.width), h: Math.round(r.height) };
           })(),
           extractFound: document.querySelector(".qr-id")?.textContent ?? "",
+          buttons: Array.from(document.querySelectorAll("button")).map((b) => {
+            const r = b.getBoundingClientRect();
+            const cs = getComputedStyle(b);
+            return {
+              text: (b.textContent ?? "").trim().slice(0, 14),
+              w: Math.round(r.width),
+              h: Math.round(r.height),
+              visible: r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none",
+              bg: cs.backgroundColor,
+              color: cs.color,
+            };
+          }),
         },
       }).catch(() => undefined);
     }, 700);
@@ -653,7 +672,7 @@ export default function App() {
             ) : null;
           })()}
 
-          <div className="two-col" style={{ marginTop: 14 }}>
+          <div className="btn-stack">
             <Button
               block
               color="primary"
@@ -667,8 +686,11 @@ export default function App() {
             >
               保存并同步场地
             </Button>
-            <Button block onClick={() => void scanQr()}>
-              扫码
+            <Button block fill="outline" color="primary" onClick={() => void scanQr()}>
+              <span className="btn-line">
+                <IconQr />
+                扫码导入 OpenID
+              </span>
             </Button>
           </div>
         </Card>
@@ -761,7 +783,7 @@ export default function App() {
         <List className="group">
           <List.Item
             description="Rust + Tauri · 轨迹与协议全部本地完成"
-            extra={<Button size="mini" onClick={() => void Dialog.alert({ content: "小雨run v3.0.0" })}>版本</Button>}
+            extra={<span className="ver">v{version}</span>}
           >
             小雨run
           </List.Item>
