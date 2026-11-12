@@ -28,7 +28,7 @@
             android:value="@string/app_author" />
         <meta-data
             android:name="version"
-            android:value="2.0.0" />
+            android:value="2.0.1" />
 
         <activity
             android:name=".MainActivity"

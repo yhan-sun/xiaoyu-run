@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>小雨run · 交互式界面预览</title>
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --surface: #FFFFFF;
+      --surface-sec: #E5E5EA;
+      --text-pri: #000000;
+      --text-sec: #6C6C70;
+      --text-ter: #8E8E93;
+      --accent: #007AFF;
+      --accent-soft: #E8F2FF;
+      --accent-stroke: #B3D7FF;
+      --success: #34C759;
+      --success-soft: #EBF9EE;
+      --success-stroke: #A3E8B5;
+      --warning: #FF9500;
+      --warning-soft: #FFF6E6;
+      --danger: #FF3B30;
+      --danger-soft: #FEECEB;
+      --card-stroke: #E5E5EA;
+      --nav-bg: rgba(249, 249, 251, 0.92);
+      --nav-stroke: #E5E5EA;
+    }
+
+    [data-theme="dark"] {
+      --bg: #000000;
+      --surface: #1C1C1E;
+      --surface-sec: #2C2C2E;
+      --text-pri: #FFFFFF;
+      --text-sec: #8E8E93;
+      --text-ter: #636366;
+      --accent: #0A84FF;
+      --accent-soft: #162842;
+      --accent-stroke: #1E497A;
+      --success: #30D158;
+      --success-soft: #143320;
+      --success-stroke: #1E5E35;
+      --warning: #FF9F0A;
+      --warning-soft: #3D2708;
+      --danger: #FF453A;
+      --danger-soft: #3C1615;
+      --card-stroke: #2C2C2E;
+      --nav-bg: rgba(28, 28, 30, 0.92);
+      --nav-stroke: #2C2C2E;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: #18191c;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 12px;
+      color: var(--text-pri);
+    }
+
+    /* 手机外壳容器 (Apple Device Frame) */
+    .device-shell {
+      width: 390px;
+      height: 820px;
+      background: var(--bg);
+      border-radius: 50px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.45), 0 0 0 12px #2d3036, 0 0 0 14px #1a1b1e;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: background 0.25s ease;
+    }
+
+    /* 顶部灵动岛 */
+    .island {
+      width: 120px;
+      height: 30px;
+      background: #000;
+      border-radius: 18px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 12px;
+    }
+    .island-lens {
+      width: 11px;
+      height: 11px;
+      background: #111e38;
+      border-radius: 50%;
+      border: 1px solid #1a2c4e;
+    }
+
+    /* 顶部 Header */
+    .header {
+      padding: 48px 20px 14px 20px;
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-stroke);
+      flex-shrink: 0;
+      transition: all 0.25s ease;
+    }
+    .header-title-box { display: flex; flex-direction: column; }
+    .header-title-row { display: flex; align-items: center; gap: 8px; }
+    .header-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--surface-sec);
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .header-sub { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--surface-sec);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      color: var(--text-pri);
+    }
+
+    /* 主内容视口 */
+    .viewport {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px 90px 16px;
+      position: relative;
+    }
+    .viewport::-webkit-scrollbar { display: none; }
+
+    .panel { display: none; flex-direction: column; gap: 14px; }
+    .panel.active { display: flex; }
+
+    /* Apple 风格卡片 */
+    .card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 16px;
+      border: 1px solid var(--card-stroke);
+      transition: all 0.25s ease;
+    }
+    .card-banner {
+      background: var(--warning-soft);
+      border-radius: 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--card-stroke);
+      font-size: 12px;
+      color: var(--text-sec);
+      line-height: 1.5;
+    }
+
+    .sec-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sec);
+      letter-spacing: 0.5px;
+      margin: 12px 0 6px 4px;
+    }
+
+    /* 仪表盘 */
+    .dash-top { display: flex; justify-content: space-between; align-items: center; }
+    .dash-status { font-size: 12px; font-weight: 700; color: var(--text-sec); }
+    .dash-pct { font-size: 17px; font-weight: 700; color: var(--accent); }
+    .dash-dist { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin: 8px 0 12px 0; }
+    .dash-prog-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--surface-sec);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .dash-prog-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* 动态跑道 Canvas */
+    .track-canvas-container {
+      width: 100%;
+      height: 110px;
+      margin-top: 14px;
+      background: var(--surface-sec);
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas#trackCanvas { width: 100%; height: 100%; display: block; }
+
+    .dash-cols {
+      display: flex;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--card-stroke);
+    }
+    .dash-col { flex: 1; }
+    .dash-col-lbl { font-size: 11px; color: var(--text-sec); }
+    .dash-col-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+
+    /* 按键 */
+    .btn-primary {
+      width: 100%;
+      height: 52px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      border: none;
+      border-radius: 26px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 122, 255, 0.3);
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-danger {
+      background: var(--danger);
+      box-shadow: 0 4px 14px rgba(255, 59, 48, 0.3);
+    }
+    .btn-ghost {
+      width: 100%;
+      height: 42px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid var(--accent-stroke);
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* 输入控件 */
+    .input-box {
+      width: 100%;
+      height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--card-stroke);
+      border-radius: 12px;
+      padding: 0 14px;
+      font-size: 15px;
+      color: var(--text-pri);
+      outline: none;
+      margin-top: 6px;
+    }
+    .input-box:focus { border-color: var(--accent); }
+    .input-row { display: flex; gap: 10px; margin-top: 10px; }
+
+    /* 分段选择器 */
+    .seg-group {
+      background: var(--surface-sec);
+      border-radius: 12px;
+      padding: 3px;
+      display: flex;
+    }
+    .seg-btn {
+      flex: 1;
+      height: 36px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--text-sec);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .seg-btn.active {
+      background: var(--surface);
+      color: var(--text-pri);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    /* 悬浮底栏 */
+    .dock {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      height: 56px;
+      background: var(--nav-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 28px;
+      border: 1px solid var(--nav-stroke);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      display: flex;
+      padding: 4px;
+      z-index: 50;
+    }
+    .dock-tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sec);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .dock-tab.active {
+      background: var(--surface);
+      color: var(--text-pri);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <div class="device-shell">
+    <div class="island"><div class="island-lens"></div></div>
+
+    <!-- 顶栏 -->
+    <div class="header">
+      <div class="header-title-box">
+        <div class="header-title-row">
+          <span class="header-title">小雨run</span>
+          <span class="header-badge">2.0 · 运动</span>
+        </div>
+        <span class="header-sub">极简、优雅的校园运动伴侣</span>
+      </div>
+      <button class="icon-btn" id="themeToggleBtn" title="切换深浅主题">
+        🌙
+      </button>
+    </div>
+
+    <!-- 滚动区域 -->
+    <div class="viewport">
+
+      <!-- Panel 1: 运动面板 -->
+      <div class="panel active" id="p-run">
+        <div class="card">
+          <div class="dash-top">
+            <span class="dash-status" id="dashPace">配速 5'45"/km · 待命</span>
+            <span class="dash-pct" id="dashPct">0%</span>
+          </div>
+          <div class="dash-dist" id="dashDist">0.00 / 2.00 km</div>
+          <div class="dash-prog-bar">
+            <div class="dash-prog-fill" id="dashFill"></div>
+          </div>
+
+          <!-- 拟真动态跑道 -->
+          <div class="track-canvas-container">
+            <canvas id="trackCanvas"></canvas>
+          </div>
+
+          <div class="dash-cols">
+            <div class="dash-col">
+              <div class="dash-col-lbl">用时 / 预计</div>
+              <div class="dash-col-val" id="dashTime">00:00 · 11:30</div>
+            </div>
+            <div class="dash-col">
+              <div class="dash-col-lbl">节点调度</div>
+              <div class="dash-col-val" id="dashBatches">0/99 批 · 0 点</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: var(--success); margin-top: 10px;" id="dashServer">
+            ✓ 远端确认有效 0.00 km
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btnMainAction">开启巡航打卡</button>
+
+        <div class="card-banner">
+          🟢 <strong>后台巡航保活已就绪</strong><br>
+          锁屏或放入口袋中均可平稳完成运动调度，不丢节拍。
+        </div>
+
+        <div class="sec-header">运动参数配置</div>
+        <div class="card">
+          <div style="font-size: 12px; font-weight: bold; color: var(--text-sec);">目标场地</div>
+          <select class="input-box" id="spArea">
+            <option>风华运动场 (T1001 · 400m)</option>
+            <option>红石运动场 (T1002 · 400m)</option>
+            <option>太极运动场 (T1005 · 400m)</option>
+          </select>
+
+          <div class="input-row">
+            <div style="flex:1;">
+              <div style="font-size: 12px; font-weight: bold; color: var(--text-sec);">目标配速</div>
+              <input class="input-box" value="5:45" id="etPace">
+            </div>
+            <div style="flex:1;">
+              <div style="font-size: 12px; font-weight: bold; color: var(--text-sec);">目标距离 (km)</div>
+              <input class="input-box" value="2.0" id="etDist">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: 统计面板 -->
+      <div class="panel" id="p-stats">
+        <button class="btn-ghost" id="btnRefreshStats">同步最新云端成绩</button>
+        <div class="sec-header">学期有效成绩统计</div>
+        <div class="card">
+          <div style="font-size: 14px; line-height: 1.6;">
+            🎉 本学期已累计打卡 <strong>18</strong> 次<br>
+            有效跑量：<strong>36.00 km</strong> · 达标率 100%
+          </div>
+        </div>
+        <div class="sec-header">场地分布</div>
+        <div class="card" style="font-size: 13px; color: var(--text-sec); line-height: 1.6;">
+          • 风华操场：12 次<br>
+          • 太极操场：6 次
+        </div>
+      </div>
+
+      <!-- Panel 3: 指南面板 -->
+      <div class="panel" id="p-start">
+        <div class="sec-header">身份凭证设置</div>
+        <div class="card">
+          <div style="font-size: 12px; font-weight: bold; color: var(--text-sec);">OpenID</div>
+          <input class="input-box" placeholder="粘贴你的 OpenID" id="openidInput" value="oG-xxxxxxxxxxxxxxxxxxxxxxx">
+          <button class="btn-primary" style="margin-top: 12px; height: 44px; font-size: 14px;">同步场地与规则</button>
+        </div>
+
+        <div class="sec-header">快速上手说明</div>
+        <div class="card" style="font-size: 13px; line-height: 1.6;">
+          【1】获取 OpenID：电脑微信登录打开一次小程序，运行 <code>tools/get_openid.py</code> 获取。<br>
+          【2】开启巡航：选择操场与配速，点击开启打卡放入口袋。<br>
+          【3】人脸复核：走过操场物理摄像头一次，跑满 2 公里自动平稳结算。
+        </div>
+      </div>
+
+      <!-- Panel 4: 设置面板 -->
+      <div class="panel" id="p-settings">
+        <div class="sec-header">外观风格</div>
+        <div class="seg-group">
+          <button class="seg-btn" id="segAuto">跟随系统</button>
+          <button class="seg-btn active" id="segDark">深色</button>
+          <button class="seg-btn" id="segLight">浅色</button>
+        </div>
+
+        <div class="sec-header">关于 小雨run</div>
+        <div class="card" style="font-size: 13px; line-height: 1.6;">
+          极简、纯净、高可靠性的校园运动辅助工具。<br><br>
+          • 纯本地零上报，无定位权限<br>
+          • 智能规避禁跑区与自适应多边形内缩<br>
+          • Apple HIG 顶级美学重构
+        </div>
+
+        <div class="card" style="margin-top: 10px;">
+          <div style="font-size: 12px; color: var(--accent); word-break: break-all;">
+            https://github.com/yhan-sun/xiaoyu-run
+          </div>
+          <button class="btn-ghost" style="margin-top: 8px;">复制仓库链接</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 底部悬浮 Dock 导航栏 -->
+    <div class="dock">
+      <button class="dock-tab active" data-target="p-run">运动</button>
+      <button class="dock-tab" data-target="p-stats">统计</button>
+      <button class="dock-tab" data-target="p-start">指南</button>
+      <button class="dock-tab" data-target="p-settings">设置</button>
+    </div>
+  </div>
+
+  <script>
+    // 选项卡切换
+    const tabs = document.querySelectorAll('.dock-tab');
+    const panels = document.querySelectorAll('.panel');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+      });
+    });
+
+    // 主题切换
+    const themeBtn = document.getElementById('themeToggleBtn');
+    let isDark = true;
+    function setTheme(dark) {
+      isDark = dark;
+      document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      themeBtn.textContent = isDark ? '🌙' : '☀️';
+      document.getElementById('segDark').classList.toggle('active', isDark);
+      document.getElementById('segLight').classList.toggle('active', !isDark);
+      drawTrack();
+    }
+    themeBtn.addEventListener('click', () => setTheme(!isDark));
+    document.getElementById('segDark').addEventListener('click', () => setTheme(true));
+    document.getElementById('segLight').addEventListener('click', () => setTheme(false));
+    document.getElementById('segAuto').addEventListener('click', () => setTheme(true));
+
+    // 动态跑道 Canvas 绘制
+    const canvas = document.getElementById('trackCanvas');
+    const ctx = canvas.getContext('2d');
+    let runProgress = 0.0;
+    let isRunning = false;
+    let pulseVal = 0;
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
+      canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawTrack() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const pad = 24 * window.devicePixelRatio;
+      const rectW = w - pad * 2;
+      const rectH = h - pad * 2;
+      const r = Math.min(rectH / 2, rectW / 4);
+      const rx = pad;
+      const ry = pad;
+
+      // 1. 跑道底轨
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, rectW, rectH, r);
+      ctx.strokeStyle = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)";
+      ctx.lineWidth = 4 * window.devicePixelRatio;
+      ctx.stroke();
+
+      // 2. 跑道主高亮线
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, rectW, rectH, r);
+      ctx.strokeStyle = isDark ? "#0A84FF" : "#007AFF";
+      ctx.lineWidth = 3 * window.devicePixelRatio;
+      ctx.stroke();
+
+      // 3. 计算跑步者坐标 (沿圆角矩形巡航)
+      const straightW = rectW - 2 * r;
+      const arcLen = (Math.PI * r) / 2;
+      const perimeter = 2 * straightW + 4 * arcLen;
+      let d = (runProgress * perimeter) % perimeter;
+
+      let px = rx + r, py = ry;
+      if (d <= straightW) {
+        px = rx + r + d;
+        py = ry;
+      } else {
+        d -= straightW;
+        if (d <= arcLen) {
+          const ang = (d / arcLen) * (Math.PI / 2) - Math.PI / 2;
+          px = rx + rectW - r + r * Math.cos(ang);
+          py = ry + r + r * Math.sin(ang);
+        } else {
+          d -= arcLen;
+          if (d <= arcLen) {
+            const ang = (d / arcLen) * (Math.PI / 2);
+            px = rx + rectW - r + r * Math.cos(ang);
+            py = ry + rectH - r + r * Math.sin(ang);
+          } else {
+            d -= arcLen;
+            if (d <= straightW) {
+              px = rx + rectW - r - d;
+              py = ry + rectH;
+            } else {
+              d -= straightW;
+              if (d <= arcLen) {
+                const ang = (d / arcLen) * (Math.PI / 2) + Math.PI / 2;
+                px = rx + r + r * Math.cos(ang);
+                py = ry + rectH - r + r * Math.sin(ang);
+              } else {
+                d -= arcLen;
+                const ang = (d / arcLen) * (Math.PI / 2) + Math.PI;
+                px = rx + r + r * Math.cos(ang);
+                py = ry + r + r * Math.sin(ang);
+              }
+            }
+          }
+        }
+      }
+
+      // 4. 脉冲波
+      if (isRunning) {
+        pulseVal = (pulseVal + 0.05) % (Math.PI * 2);
+        const pR = (8 + Math.sin(pulseVal) * 6) * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.arc(px, py, pR, 0, Math.PI * 2);
+        ctx.fillStyle = isDark ? "rgba(10, 132, 255, 0.35)" : "rgba(0, 122, 255, 0.3)";
+        ctx.fill();
+      }
+
+      // 5. 跑步者实体圆点
+      ctx.beginPath();
+      ctx.arc(px, py, 6 * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fillStyle = isDark ? "#0A84FF" : "#007AFF";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5 * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill();
+    }
+
+    // 巡航交互模拟
+    const btnAction = document.getElementById('btnMainAction');
+    const dashPct = document.getElementById('dashPct');
+    const dashDist = document.getElementById('dashDist');
+    const dashFill = document.getElementById('dashFill');
+    const dashTime = document.getElementById('dashTime');
+    const dashBatches = document.getElementById('dashBatches');
+    const dashPace = document.getElementById('dashPace');
+    const dashServer = document.getElementById('dashServer');
+
+    let runTimer = null;
+    let elapsed = 0;
+    const totalDist = 2.0;
+
+    btnAction.addEventListener('click', () => {
+      isRunning = !isRunning;
+      if (isRunning) {
+        btnAction.textContent = "停止并结算";
+        btnAction.classList.add('btn-danger');
+        dashPace.textContent = "配速 5'45\"/km · 巡航中";
+        runTimer = setInterval(() => {
+          elapsed += 1;
+          const pct = Math.min(100, (elapsed / 40) * 100);
+          runProgress = pct / 100.0;
+          const currDist = (runProgress * totalDist).toFixed(2);
+
+          dashPct.textContent = `${Math.floor(pct)}%`;
+          dashDist.textContent = `${currDist} / ${totalDist.toFixed(2)} km`;
+          dashFill.style.width = `${pct}%`;
+
+          const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const s = String(elapsed % 60).padStart(2, '0');
+          dashTime.textContent = `${m}:${s} · 剩余 09:20`;
+          dashBatches.textContent = `${Math.floor(pct * 0.99)}/99 批 · ${Math.floor(pct * 6.9)} 点`;
+          dashServer.textContent = `✓ 远端确认有效 ${(currDist * 0.99).toFixed(2)} km`;
+
+          if (pct >= 100) {
+            clearInterval(runTimer);
+            btnAction.textContent = "打卡已圆满完成";
+            btnAction.classList.remove('btn-danger');
+            btnAction.style.background = "var(--success)";
+          }
+        }, 200);
+      } else {
+        clearInterval(runTimer);
+        btnAction.textContent = "开启巡航打卡";
+        btnAction.classList.remove('btn-danger');
+        btnAction.style.background = "";
+        dashPace.textContent = "配速 5'45\"/km · 待命";
+      }
+    });
+
+    function animLoop() {
+      drawTrack();
+      requestAnimationFrame(animLoop);
+    }
+    animLoop();
+  </script>
+</body>
+</html>
