@@ -648,8 +648,12 @@ async function doConnect() {
 
 async function doStart() {
   const prm = currentParams();
-  if (!prm.placeCode) {
-    toast("请先同步并选择场地", "bad");
+  if (!prm.placeCode || prm.placeCode === "__demo__") {
+    toast("示例场地只能预览，请先在「指南」页同步真实场地", "bad");
+    return;
+  }
+  if (!el.inOpenid.value.trim()) {
+    toast("请先在「指南」页填入 OpenID", "bad");
     return;
   }
   state.logs = [];
@@ -657,7 +661,7 @@ async function doStart() {
   setRunningUi(true);
   appendLog("开始打卡 …");
 
-  const res = await call<void>("start_run", {
+  const res = await call<boolean>("start_run", {
     req: {
       openid: el.inOpenid.value.trim(),
       placeCode: prm.placeCode,
@@ -669,7 +673,7 @@ async function doStart() {
     },
   });
 
-  if (res === null && isTauri) {
+  if (!res) {
     setRunningUi(false);
     setStatus("启动失败", "bad");
   }

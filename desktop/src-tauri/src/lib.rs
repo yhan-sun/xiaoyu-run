@@ -416,7 +416,7 @@ fn start_run(
     app: tauri::AppHandle,
     state: State<'_, Mutex<AppState>>,
     req: RunRequest,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let mut st = state.lock().map_err(|_| "状态锁失败")?;
 
     // 只取 Arc 出来就释放 State 借用，后面才能把 app move 进线程
@@ -489,7 +489,7 @@ fn start_run(
         }
     });
 
-    Ok(())
+    Ok(true)
 }
 
 #[tauri::command]
