@@ -89,6 +89,16 @@ pub fn fmt_duration(sec: i64) -> String {
     format!("{:02}:{:02}", sec / 60, sec % 60)
 }
 
+/// 宽松取数：兼容 `29.53` 与 `"29.53"` 两种下发形态。
+/// 小程序坐标系字段实际是字符串，用 as_f64() 会全部丢成 0。
+fn as_f64_loose(v: &serde_json::Value, key: &str) -> Option<f64> {
+    match v.get(key)? {
+        serde_json::Value::Number(n) => n.as_f64(),
+        serde_json::Value::String(s) => s.trim().parse::<f64>().ok(),
+        _ => None,
+    }
+}
+
 fn as_str(v: &serde_json::Value, key: &str) -> String {
     match v.get(key) {
         Some(serde_json::Value::String(s)) => s.clone(),
@@ -178,12 +188,14 @@ pub fn fetch_areas(api: &mut Api) -> (Vec<Area>, Vec<String>) {
         };
         let pts: Poly = pl
             .iter()
-            .map(|p| {
-                let lat = p.get("latitude").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let lon = p.get("longitude").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                (lat, lon)
+            .filter_map(|p| {
+                let lat = as_f64_loose(p, "latitude")?;
+                let lon = as_f64_loose(p, "longitude")?;
+                if lat == 0.0 || lon == 0.0 {
+                    return None;
+                }
+                Some((lat, lon))
             })
-            .filter(|(a, b)| *a != 0.0 && *b != 0.0)
             .collect();
         if pts.len() < 3 {
             continue;
@@ -232,7 +244,16 @@ pub fn fetch_areas(api: &mut Api) -> (Vec<Area>, Vec<String>) {
         })
         .collect();
 
-    logs.push(format!("可用场地 {} 个", out.len()));
+    logs.push(format!(
+        "解析：区域记录 {} 条 → 围栏 {} 个 / 禁跑区 {} 块 → 可用场地 {} 个",
+        arr.len(),
+        fences.len(),
+        bans.len(),
+        out.len()
+    ));
+    if out.is_empty() && !arr.is_empty() && fences.is_empty() {
+        logs.push("没有 dzwl 类型的围栏记录，可能是该账号本学期场地未开放".into());
+    }
     (out, logs)
 }
 
