@@ -67,9 +67,20 @@ jobs:
           echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK_VER" >> "$GITHUB_ENV"
           ls "$ANDROID_HOME/ndk"
 
+      - name: Install Tauri host deps (for unit tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf
+
       - name: Install npm deps
         working-directory: desktop
         run: npm ci
+
+      - name: Build frontend
+        working-directory: desktop
+        run: npm run build
 
       - name: Rust unit tests
         working-directory: desktop/src-tauri

@@ -1442,3 +1442,36 @@ code,
     padding-top: calc(env(safe-area-inset-top, 0px) + 40px);
   }
 }
+
+/* 底部标签栏的滑动指示片 */
+.tabbar {
+  position: relative;
+}
+
+.tab-pill {
+  position: absolute;
+  top: 7px;
+  left: 0;
+  width: 25%;
+  height: 40px;
+  border-radius: 13px;
+  background: var(--accent-dim);
+  transition: transform 340ms cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

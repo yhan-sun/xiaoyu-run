@@ -607,7 +607,22 @@ fn point_at(dense: &[(f64, f64)], cum: &[f64], dist: f64) -> ((f64, f64), f64) {
 
 // ------------------------------------------------------------------ 毛刺 / 突起
 
-/// 稀疏野点：模拟真实 GPS 在多径、树荫、贴楼时突然"跳一下"。
+/// 横向游走：让轨迹像真人跑出来的，而不是尺子画的一条线。
+///
+/// **不用脉冲式尖刺。** 早期版本用「单点横向偏移 9~16m」模拟 GPS 跳点，
+/// 那在几何上等于一秒内出峰又回原位，必然形成尖锐的针状突起 ——
+/// 真人跑步产生不了这种形状，看起来也假。
+///
+/// 现在改成若干**升余弦包络**的横向偏移：
+///   env(s) = (1 - cos(2πs)) / 2   ，s ∈ [0,1]
+/// 两端值与一阶导同时为零，所以偏移是"鼓包"而不是"尖刺"，
+/// 起点和终点都平滑并入跑线。多档不同跨度叠加后，得到的是
+/// 真实 App 上那种**粗细不均、来回游走**的带状轨迹。
+///
+/// 三档尺度（全部按总时长换算，2km 和 5km 密度一致）：
+///   · 细微摆动  1.2~2.8m / 5~12 秒   每 ~22 秒一次
+///   · 明显偏线  2.2~5.0m / 10~24 秒  每 ~70 秒一次
+///   · 绕行贴外  4.5~8.5m / 18~40 秒  每 ~180 秒一次
 fn make_spurs(n: usize, seed: i64, intensity: f64) -> Spurs {
     let mut lateral = vec![0.0; n];
     let mut forward = vec![0.0; n];
@@ -616,121 +631,33 @@ fn make_spurs(n: usize, seed: i64, intensity: f64) -> Spurs {
     }
 
     let mut rnd = Rng::new(seed.wrapping_mul(1_000_003).wrapping_add(77));
-    let mut used: Vec<i32> = Vec::new();
-    let free = |used: &Vec<i32>, at: i32, gap: i32| -> bool {
-        !used.iter().any(|u| (u - at).abs() < gap)
-    };
 
-    let lo = ((n as f64 * 0.04) as i32).max(2);
-    let hi = ((n as f64 * 0.96) as i32).min(n as i32 - 4);
-    if hi <= lo {
-        return Spurs { lateral, forward };
-    }
+    let lo = ((n as f64 * 0.03) as i32).max(2);
+    let hi = (n as i32 - 4).max(lo + 6);
 
-    // 大跳：先占位，免得被密集的小毛刺挤掉
-    for _ in 0..(n / 450).max(1) {
-        let mut tries = 0;
-        while tries < 60 {
-            tries += 1;
+    // (幅度下限, 幅度上限, 跨度下限(秒), 跨度上限(秒), 次数分母)
+    let tiers: [(f64, f64, i32, i32, usize); 3] = [
+        (1.2, 2.8, 5, 12, 22),
+        (2.2, 5.0, 10, 24, 70),
+        (4.5, 8.5, 18, 40, 180),
+    ];
+
+    for (amin, amax, smin, smax, div) in tiers {
+        let count = (n / div).max(1);
+        for _ in 0..count {
+            let span = rnd.range(smin, smax + 1);
             let at = rnd.range(lo, hi);
-            if !free(&used, at, 14) {
-                continue;
-            }
-            used.push(at);
-            let a = rnd.uniform(9.0, 16.0) * intensity * rnd.sign();
-            lateral[at as usize] = a;
-            forward[at as usize] = a * rnd.uniform(-0.25, 0.25);
-            break;
-        }
-    }
+            let amp = rnd.uniform(amin, amax) * intensity * rnd.sign();
+            // 前后方向的轻微错位，避免所有鼓包都严格垂直于跑线
+            let fwd_share = rnd.uniform(-0.22, 0.22);
 
-    // 大绕行包：走成一个不对称的三角形
-    for _ in 0..(n / 230).max(2) {
-        let mut tries = 0;
-        while tries < 80 {
-            tries += 1;
-            let at = rnd.range(lo, hi);
-            let span = rnd.range(4, 10);
-            if at + span >= n as i32 || !free(&used, at, span + 10) {
-                continue;
-            }
-            used.push(at);
-            let a = rnd.uniform(5.0, 11.0) * intensity * rnd.sign();
-            let fwd_share = rnd.uniform(-0.25, 0.25);
             for k in 0..=span {
-                let s = k as f64 / span as f64;
-                let idx = (at + k) as usize;
-                if idx < n {
-                    lateral[idx] = a * (std::f64::consts::PI * s).sin();
-                    forward[idx] = a * fwd_share * (2.0 * std::f64::consts::PI * s).sin();
-                }
+                let u = k as f64 / span as f64;
+                let env = 0.5 - 0.5 * (std::f64::consts::TAU * u).cos();
+                let idx = ((at + k) as usize) % n;
+                lateral[idx] += amp * env;
+                forward[idx] += amp * fwd_share * (std::f64::consts::TAU * u).sin();
             }
-            break;
-        }
-    }
-
-    // 硬毛刺：一秒尖刺 / 两秒来回 / 两三秒的小三角
-    for _ in 0..(n / 75).max(4) {
-        let mut tries = 0;
-        while tries < 80 {
-            tries += 1;
-            let at = rnd.range(lo, hi);
-            if !free(&used, at, 8) {
-                continue;
-            }
-            used.push(at);
-            let a = rnd.uniform(3.0, 8.0) * intensity;
-            let sign = rnd.sign();
-            let share = rnd.uniform(-0.35, 0.35);
-            let shape = rnd.next_f64();
-            let idx = at as usize;
-            if shape < 0.45 {
-                lateral[idx] = a * sign;
-                forward[idx] = a * share;
-            } else if shape < 0.72 {
-                lateral[idx] = a * sign;
-                forward[idx] = a * share;
-                if idx + 1 < n {
-                    lateral[idx + 1] = if rnd.boolean() {
-                        -a * 0.55 * sign
-                    } else {
-                        a * 0.3 * sign
-                    };
-                }
-            } else {
-                let span = rnd.range(2, 5);
-                let peak = rnd.range(1, span);
-                for k in 0..=span {
-                    let denom = if k <= peak { peak } else { span - peak }.max(1) as f64;
-                    let frac = (1.0 - (k - peak).abs() as f64 / denom).max(0.0);
-                    let j = (at + k) as usize;
-                    if j < n {
-                        lateral[j] = a * 1.2 * sign * frac;
-                    }
-                }
-            }
-            break;
-        }
-    }
-
-    // 小毛刺：频率高、幅度小，负责把线边揉毛
-    for _ in 0..(n / 17).max(6) {
-        let mut tries = 0;
-        while tries < 60 {
-            tries += 1;
-            if n < 5 {
-                break;
-            }
-            let at = rnd.range(2, n as i32 - 2);
-            if !free(&used, at, 4) {
-                continue;
-            }
-            used.push(at);
-            let a = rnd.uniform(0.8, 2.6) * intensity * rnd.sign();
-            let idx = at as usize;
-            lateral[idx] = a;
-            forward[idx] = rnd.uniform(-0.5, 0.5) * a * 0.4;
-            break;
         }
     }
 
@@ -1171,5 +1098,84 @@ mod tests {
         let (fast, slow) = window_pace_range(&r.points, 15);
         assert!(fast > 0.0 && slow > 0.0);
         assert!(fast <= slow);
+    }
+}
+
+#[cfg(test)]
+mod shape_tests {
+    use super::*;
+
+    fn rect_fence() -> Poly {
+        let (clat, clon) = (29.5330, 106.6050);
+        let (dlat, dlon) = (0.00052, 0.00052);
+        vec![
+            (clat - dlat, clon - dlon),
+            (clat - dlat, clon + dlon),
+            (clat + dlat, clon + dlon),
+            (clat + dlat, clon - dlon),
+        ]
+    }
+
+    /// 到局部弦的垂距 / 弦长。
+    ///
+    /// 这是「尖刺」的物理定义：正常跑动里，中间点应该贴着前后两点的连线
+    /// （比值很小）；出峰又原路返回的针状突起，比值会接近甚至超过 1。
+    /// 只用「航向变化」不行 —— 暂停时相邻点几乎重合，方位角是噪声。
+    fn spur_ratio(pts: &[TrackPoint], i: usize) -> Option<f64> {
+        let a = (pts[i - 1].lat, pts[i - 1].lon);
+        let b = (pts[i].lat, pts[i].lon);
+        let c = (pts[i + 1].lat, pts[i + 1].lon);
+
+        let chord = geo::hav(a.0, a.1, c.0, c.1);
+        if chord < 1.5 {
+            return None; // 几乎静止，没有判别意义
+        }
+        // 平面近似下的点到直线距离
+        let scale = (a.0.to_radians().cos()).max(0.2);
+        let ax = a.1 * scale;
+        let ay = a.0;
+        let bx = b.1 * scale;
+        let by = b.0;
+        let cx = c.1 * scale;
+        let cy = c.0;
+        let dx = cx - ax;
+        let dy = cy - ay;
+        let len = (dx * dx + dy * dy).sqrt();
+        if len <= 0.0 {
+            return None;
+        }
+        let cross = ((bx - ax) * dy - (by - ay) * dx).abs() / len;
+        // 把「度」换算成米量级比例（同一尺度下相除，单位约掉）
+        Some(cross / (chord / 111_320.0))
+    }
+
+    fn worst_spur(pts: &[TrackPoint]) -> (usize, f64) {
+        let mut worst = (0usize, 0.0f64);
+        for i in 1..pts.len().saturating_sub(1) {
+            if let Some(r) = spur_ratio(pts, i) {
+                if r > worst.1 {
+                    worst = (i, r);
+                }
+            }
+        }
+        worst
+    }
+
+    #[test]
+    fn burrs_have_no_needle_spikes() {
+        let fence = rect_fence();
+        for seed in [0_i64, 7, 42, 555, 20240101] {
+            let r = generate(&fence, &[], 345.0, 2000.0, 0.6, seed, 20.0, true).unwrap();
+            let (idx, ratio) = worst_spur(&r.points);
+            let g = r
+                .points
+                .windows(2)
+                .map(|w| geo::hav(w[0].lat, w[0].lon, w[1].lat, w[1].lon))
+                .fold(0.0f64, f64::max);
+            println!(
+                "seed={seed:>9}  最尖点 #{idx}  垂距/弦长 = {ratio:.2}  最大间距 {g:.2} m"
+            );
+            assert!(ratio < 0.9, "seed={seed} 第 {idx} 点出现针状突起（{ratio:.2}）");
+        }
     }
 }

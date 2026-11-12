@@ -272,14 +272,64 @@ function computeBounds(rings: [number, number][][]): Bounds | null {
   return { minLat, maxLat, minLon, maxLon };
 }
 
-function drawCanvas() {
+const reducedMotion =
+  typeof matchMedia === "function" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** 已平滑到的进度（0..1），与真实进度解耦，用于动画插值。 */
+let animProgress = 0;
+let animMeters = 0;
+let targetMeters = 0;
+let animTotal = 0;
+let rafId = 0;
+
+/** 请求重绘并推进动画；静止后自动停下，避免空转耗电。 */
+function ensureAnim() {
+  if (reducedMotion) {
+    animProgress = state.progressFrac;
+    drawCanvas(0);
+    return;
+  }
+  if (rafId) return;
+
+  const step = () => {
+    rafId = 0;
+    const target = state.progressFrac;
+    const diff = target - animProgress;
+    const settled = Math.abs(diff) < 0.0004;
+
+    if (!settled) animProgress += diff * 0.16;
+    else animProgress = target;
+
+    // 里程数字同步缓动，避免读数一格一格地跳
+    const mDiff = targetMeters - animMeters;
+    if (Math.abs(mDiff) > 0.5) animMeters += mDiff * 0.18;
+    else animMeters = targetMeters;
+
+    el.mDist.textContent = (animMeters / 1000).toFixed(2);
+
+    drawCanvas(performance.now());
+
+    // 打卡中持续跑（脉冲/拖尾需要连续帧），静止后自然停
+    if (!settled || state.running) {
+      rafId = requestAnimationFrame(step);
+    }
+  };
+  rafId = requestAnimationFrame(step);
+}
+
+function drawCanvas(now: number) {
   const canvas = el.canvas;
   const rect = canvas.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) return;
 
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
+  const needW = Math.round(rect.width * dpr);
+  const needH = Math.round(rect.height * dpr);
+  if (canvas.width !== needW || canvas.height !== needH) {
+    canvas.width = needW;
+    canvas.height = needH;
+  }
 
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -311,9 +361,10 @@ function drawCanvas() {
 
   const bounds = computeBounds([p.fence, p.points]);
   if (!bounds) return;
-  const pad = 26;
+  const pad = 24;
+  const pts = p.points;
 
-  // 围栏
+  // ---------- 电子围栏 ----------
   if (p.fence.length >= 3) {
     ctx.beginPath();
     p.fence.forEach(([lat, lon], i) => {
@@ -322,69 +373,110 @@ function drawCanvas() {
       else ctx.lineTo(x, y);
     });
     ctx.closePath();
-    ctx.fillStyle = "rgba(255,255,255,0.022)";
+    ctx.fillStyle = "rgba(127,127,127,0.045)";
     ctx.fill();
     ctx.strokeStyle = tertiary;
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = 0.5;
     ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
+    ctx.setLineDash([2.5, 3.5]);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   }
 
-  // 轨迹
+  // ---------- 整条轨迹（未跑部分，淡） ----------
   ctx.beginPath();
-  p.points.forEach(([lat, lon], i) => {
+  pts.forEach(([lat, lon], i) => {
     const [x, y] = project(lat, lon, bounds, w, h, pad);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
   ctx.strokeStyle = accent;
-  ctx.lineWidth = 1.7;
+  ctx.globalAlpha = state.running ? 0.2 : 0.55;
+  ctx.lineWidth = 1.6;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.globalAlpha = 0.92;
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // 起终点
-  const start = p.points[0];
-  const [sx, sy] = project(start[0], start[1], bounds, w, h, pad);
+  // ---------- 已跑部分（实色 + 柔光） ----------
+  const frac = Math.max(0, Math.min(1, animProgress));
+  const lastF = frac * (pts.length - 1);
+  const lastI = Math.floor(lastF);
+
+  if (lastI >= 1) {
+    ctx.beginPath();
+    for (let i = 0; i <= lastI; i++) {
+      const [x, y] = project(pts[i][0], pts[i][1], bounds, w, h, pad);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    // 段内插值，让线头连续推进而不是逐点跳
+    if (lastI < pts.length - 1) {
+      const t = lastF - lastI;
+      const [ax, ay] = project(pts[lastI][0], pts[lastI][1], bounds, w, h, pad);
+      const [bx, by] = project(
+        pts[lastI + 1][0],
+        pts[lastI + 1][1],
+        bounds,
+        w,
+        h,
+        pad
+      );
+      ctx.lineTo(ax + (bx - ax) * t, ay + (by - ay) * t);
+    }
+
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    // 外发光
+    ctx.save();
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.restore();
+
+    // 主线
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // ---------- 起点 ----------
+  const [sx, sy] = project(pts[0][0], pts[0][1], bounds, w, h, pad);
   ctx.beginPath();
-  ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+  ctx.arc(sx, sy, 3.2, 0, Math.PI * 2);
   ctx.fillStyle = success;
   ctx.fill();
 
-  // 跑动中的当前位置
-  if (state.running && state.progressFrac > 0) {
-    const idx = Math.min(
-      p.points.length - 1,
-      Math.floor(state.progressFrac * (p.points.length - 1))
-    );
-    const [px, py] = project(
-      p.points[idx][0],
-      p.points[idx][1],
-      bounds,
-      w,
-      h,
-      pad
-    );
+  // ---------- 当前位置 ----------
+  const curI = Math.min(Math.max(lastI, 0), pts.length - 1);
+  const [px, py] = project(pts[curI][0], pts[curI][1], bounds, w, h, pad);
+
+  if (state.running) {
+    const phase = (now % 1600) / 1600; // 0..1 循环
+    const halo = 7 + phase * 13;
     ctx.beginPath();
-    ctx.arc(px, py, 10, 0, Math.PI * 2);
+    ctx.arc(px, py, halo, 0, Math.PI * 2);
     ctx.fillStyle = accent;
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = (1 - phase) * 0.28;
     ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(px, py, 4, 0, Math.PI * 2);
-    ctx.fillStyle = accent;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(px, py, 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
-    ctx.fill();
   }
+
+  // 光点本体
+  ctx.beginPath();
+  ctx.arc(px, py, 4.6, 0, Math.PI * 2);
+  ctx.fillStyle = accent;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
 }
 
 // ============================================================ 渲染
@@ -394,8 +486,11 @@ function renderDashboard(s: Partial<RunState>) {
   const done = s.metersDone ?? 0;
   const frac = total > 0 ? Math.min(1, done / total) : 0;
 
-  el.mDist.textContent = (done / 1000).toFixed(2);
-  el.mTotal.textContent = `/ ${(total / 1000).toFixed(2)}`;
+  targetMeters = done;
+  if (total !== animTotal) {
+    animTotal = total;
+    el.mTotal.textContent = `/ ${(total / 1000).toFixed(2)}`;
+  }
   el.mPct.textContent = `${Math.round(frac * 100)}%`;
   el.progressFill.style.width = `${frac * 100}%`;
   el.mElapsed.textContent = fmtDuration(s.elapsedSec ?? 0);
@@ -543,7 +638,7 @@ async function runPreview() {
   if (!prm.placeCode) {
     state.preview = null;
     el.canvasBadge.textContent = "未生成轨迹";
-    drawCanvas();
+    ensureAnim();
     return;
   }
   const res = await call<PreviewResult>("preview", {
@@ -570,7 +665,7 @@ async function runPreview() {
       el.runWarn.style.display = "none";
     }
   }
-  drawCanvas();
+  ensureAnim();
   if (probeCount < 6) {
     probeCount += 1;
     await sendProbe(performance.now());
@@ -650,7 +745,7 @@ function applyTheme(mode: string) {
     b.classList.toggle("active", b.dataset.themeVal === mode);
   }
   if (state.config) state.config.theme = mode;
-  drawCanvas();
+  ensureAnim();
 }
 
 // ============================================================ 动作
@@ -852,8 +947,16 @@ function switchPage(name: string) {
     settings: "设置",
   };
   el.pageTitle.textContent = titles[name] ?? "小雨run";
+
+  // 底部滑片跟随选中项
+  const order = ["run", "stats", "guide", "settings"];
+  const pill = document.querySelector(".tab-pill") as HTMLElement | null;
+  if (pill) {
+    const i = Math.max(0, order.indexOf(name));
+    pill.style.transform = `translateX(${i * 100}%)`;
+  }
   el.btnRefresh.classList.toggle("hide", name !== "stats");
-  if (name === "run") drawCanvas();
+  if (name === "run") ensureAnim();
 }
 
 async function init() {
@@ -941,12 +1044,12 @@ async function init() {
     state.areas = [];
     state.preview = null;
     renderPlaceOptions();
-    drawCanvas();
+    drawCanvas(0);
     await call("save_config", { config: state.config });
     toast("已清空本地配置", "ok");
   });
 
-  window.addEventListener("resize", drawCanvas);
+  window.addEventListener("resize", () => drawCanvas(0));
 
   // 读取配置
   const cfg = await call<Config>("load_config");
@@ -974,7 +1077,7 @@ async function init() {
   applyTheme(state.config.theme ?? "system");
 
   renderPlaceOptions();
-  drawCanvas();
+  ensureAnim();
   refreshPower();
   // 首次进入就渲染一版轨迹（未同步场地时走内置示例跑道）
   schedulePreview(true);
@@ -983,7 +1086,7 @@ async function init() {
   if (isTauri) {
     await listen<RunState>("run-state", (e) => {
       renderDashboard(e.payload);
-      drawCanvas();
+      ensureAnim();
       if (e.payload.finished) {
         setRunningUi(false);
         setStatus("已完成", "ok");
