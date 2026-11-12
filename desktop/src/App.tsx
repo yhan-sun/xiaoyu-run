@@ -119,7 +119,7 @@ export default function App() {
   const scanActive = useRef(false);
   const scanCancelled = useRef(false);
   const [openidText, setOpenidText] = useState("");
-  const [version, setVersion] = useState("3.2.1");
+  const [version, setVersion] = useState("3.2.2");
 
   const loadedRef = useRef(false);
   const saveTimer = useRef(0);
