@@ -554,22 +554,28 @@ export default function App() {
 
           <div className="two-col">
             <label className="field">
-              <span>目标配速</span>
-              <Input
-                value={config.pace}
-                onChange={(v) => update({ pace: v })}
-                placeholder="5:45"
-                disabled={running}
-              />
+              <span>配速</span>
+              <div className="input-unit">
+                <Input
+                  value={config.pace}
+                  onChange={(v) => update({ pace: v })}
+                  placeholder="5:45"
+                  disabled={running}
+                />
+                <span className="unit">/km</span>
+              </div>
             </label>
             <label className="field">
-              <span>距离 · km</span>
-              <Input
-                value={config.dist}
-                onChange={(v) => update({ dist: v })}
-                placeholder="2.0"
-                disabled={running}
-              />
+              <span>距离</span>
+              <div className="input-unit">
+                <Input
+                  value={config.dist}
+                  onChange={(v) => update({ dist: v })}
+                  placeholder="2.0"
+                  disabled={running}
+                />
+                <span className="unit">km</span>
+              </div>
             </label>
           </div>
 
