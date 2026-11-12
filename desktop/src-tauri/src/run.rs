@@ -7,12 +7,13 @@ use crate::api::{Api, Resp, POINT_BATCH};
 use crate::geo;
 use crate::track::{self, Poly, TrackPoint};
 use chrono::Local;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 /// 一个可跑步的场地。
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Area {
     pub place_name: String,
     pub place_code: String,
@@ -25,6 +26,7 @@ pub struct Area {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Rule {
     /// 秒/公里
     pub min_pace: f64,
@@ -59,7 +61,7 @@ pub struct RunState {
     pub failed: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatRow {
     pub place: String,
@@ -70,7 +72,7 @@ pub struct StatRow {
     pub reason: String,
 }
 
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Stats {
     pub total: usize,

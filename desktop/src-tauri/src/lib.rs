@@ -28,6 +28,9 @@ pub struct Config {
     pub seed: i64,
     pub place_code: String,
     pub theme: String,
+    /// 上次拉到的成绩，启动时直接渲染，不必每次点刷新
+    #[serde(default)]
+    pub last_stats: Option<run::Stats>,
 }
 
 impl Default for Config {
@@ -41,6 +44,7 @@ impl Default for Config {
             seed: 0,
             place_code: String::new(),
             theme: "system".into(),
+            last_stats: None,
         }
     }
 }

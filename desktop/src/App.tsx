@@ -166,6 +166,7 @@ export default function App() {
       const merged = { ...DEFAULT_CONFIG, ...(cfg ?? {}) };
       setConfig(merged);
       setOpenidText(merged.openid);
+      if (merged.lastStats) setStats(merged.lastStats);
       loadedRef.current = true;
     })();
   }, []);
@@ -335,7 +336,10 @@ export default function App() {
     setBusy(true);
     try {
       const s = await call<Stats>("get_stats", { openid: config.openid });
-      if (s) setStats(s);
+      if (s) {
+        setStats(s);
+        setConfig((c) => ({ ...c, lastStats: s }));
+      }
     } catch (e) {
       Toast.show({ icon: "fail", content: String(e) });
     } finally {
@@ -459,7 +463,6 @@ export default function App() {
   const placeOptions = areas.map((a) => ({
     label: a.placeName,
     value: a.placeCode,
-    description: `${a.fenceVertices} 顶点${a.banCount ? ` · 禁跑区 ${a.banCount}` : ""}`,
   }));
 
   const pages: Record<TabKey, React.ReactNode> = {

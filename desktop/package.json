@@ -1,7 +1,7 @@
 {
   "name": "xiaoyu-run",
   "private": true,
-  "version": "3.1.0",
+  "version": "3.2.0",
   "type": "module",
   "description": "小雨run · 校园运动客户端（Rust + Tauri）",
   "scripts": {

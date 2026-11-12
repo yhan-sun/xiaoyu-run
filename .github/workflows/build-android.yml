@@ -154,10 +154,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0-android
-          name: "小雨run v3.1.0 · Android"
+          tag_name: v3.2.0-android
+          name: "小雨run v3.2.0 · Android"
           body: |
-            小雨run v3.1.0（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.0（Rust + Tauri 重写）· Android arm64 版
 
             #### 适用机型
             仅 arm64（arm64-v8a），覆盖 2016 年后几乎所有安卓手机。

@@ -127,6 +127,7 @@ export interface Config {
   placeCode: string;
   theme: string;
   keepAwake: boolean;
+  lastStats: Stats | null;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -139,6 +140,7 @@ export const DEFAULT_CONFIG: Config = {
   placeCode: "",
   theme: "dark",
   keepAwake: true,
+  lastStats: null,
 };
 
 // ---------------------------------------------------------------- 格式化
