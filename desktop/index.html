@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小雨run</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ==================== 侧栏 ==================== -->
+      <aside class="sidebar">
+        <div class="sidebar-head" data-tauri-drag-region></div>
+
+        <div class="brand">
+          <div class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect
+                x="3.2"
+                y="8.4"
+                width="17.6"
+                height="7.2"
+                rx="3.6"
+                stroke="#fff"
+                stroke-width="1.7"
+                opacity="0.95"
+              />
+              <circle cx="16.6" cy="12" r="1.9" fill="#fff" />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <div class="brand-name">小雨run</div>
+            <div class="brand-sub">XiaoYu Run</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <div class="nav-section">里程</div>
+
+          <button class="nav-item active" data-page="run">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12h3.5l2.2-6 3.4 12 2.6-8 1.8 4H21" />
+            </svg>
+            运动
+          </button>
+
+          <button class="nav-item" data-page="stats">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+            </svg>
+            成绩
+          </button>
+
+          <div class="nav-section">配置</div>
+
+          <button class="nav-item" data-page="guide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z" />
+              <path d="M8 7h7M8 11h5" />
+            </svg>
+            指南
+          </button>
+
+          <button class="nav-item" data-page="settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3.1" />
+              <path
+                d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-.97 1.46V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1.05-1.46 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.46-.97H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.46-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.6a1.6 1.6 0 0 0 .97-1.46V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 .97 1.46 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9c0 .68.4 1.3 1.03 1.55H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5.97Z"
+              />
+            </svg>
+            设置
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="status-line">
+            <span class="status-dot" id="statusDot"></span>
+            <span class="status-text" id="statusText">未连接</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ==================== 主区 ==================== -->
+      <main class="main">
+        <header class="main-header" data-tauri-drag-region>
+          <div class="main-title" id="pageTitle">运动</div>
+          <div class="main-header-actions">
+            <button class="btn btn-ghost hide" id="btnRefresh" title="刷新成绩">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 11a8 8 0 1 0-.6 4" />
+                <path d="M20 4v7h-7" />
+              </svg>
+              刷新
+            </button>
+          </div>
+        </header>
+
+        <div class="scroll">
+          <!-- ------------------------- 运动 ------------------------- -->
+          <section class="page active" id="page-run">
+            <div class="section-label">当前进度</div>
+
+            <div class="card">
+              <div class="row" style="justify-content: space-between; align-items: flex-start">
+                <div class="metric-hero">
+                  <div class="hero-value" id="mDist">0.00</div>
+                  <div class="hero-unit">km</div>
+                  <div class="hero-total" id="mTotal">/ 2.00</div>
+                </div>
+                <div style="text-align: right; padding-top: 6px">
+                  <div class="metric-val sm" id="mPhase">待命</div>
+                  <div class="tiny" id="mPaceHint">5'45"/km</div>
+                </div>
+              </div>
+
+              <div class="progress">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+
+              <div class="metric-grid">
+                <div class="metric-cell">
+                  <div class="metric-key">进度</div>
+                  <div class="metric-val" id="mPct">0%</div>
+                </div>
+                <div class="metric-cell">
+                  <div class="metric-key">用时</div>
+                  <div class="metric-val" id="mElapsed">00:00</div>
+                </div>
+                <div class="metric-cell">
+                  <div class="metric-key">剩余</div>
+                  <div class="metric-val" id="mEta">--:--</div>
+                </div>
+                <div class="metric-cell">
+                  <div class="metric-key">批次</div>
+                  <div class="metric-val sm" id="mBatch">0 / 0</div>
+                </div>
+              </div>
+
+              <div class="canvas-wrap">
+                <canvas id="trackCanvas"></canvas>
+                <div class="canvas-badge" id="canvasBadge">未生成轨迹</div>
+                <div class="canvas-overlay">
+                  <span><i class="legend-dot" style="background: var(--accent)"></i>轨迹</span>
+                  <span><i class="legend-dot" style="background: var(--text-tertiary)"></i>围栏</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mt-12 gap-8">
+              <button class="btn btn-primary btn-lg grow" id="btnStart">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5Z" />
+                </svg>
+                开始打卡
+              </button>
+              <button class="btn btn-lg hide" id="btnCancel">取消</button>
+            </div>
+
+            <div class="banner warn mt-12" id="runWarn" style="display: none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round">
+                <path d="M12 8.5v5M12 17h.01" />
+                <path d="M10.3 3.9 2.4 18a1.8 1.8 0 0 0 1.6 2.7h16a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
+              </svg>
+              <span id="runWarnText"></span>
+            </div>
+
+            <div class="section-label">参数</div>
+
+            <div class="card">
+              <div class="field">
+                <label class="field-label" for="selPlace">场地</label>
+                <select class="select" id="selPlace">
+                  <option value="">尚未同步场地</option>
+                </select>
+              </div>
+
+              <div class="split mt-16" style="margin-top: 14px">
+                <div class="field">
+                  <label class="field-label" for="inPace">目标配速</label>
+                  <input class="input" id="inPace" value="5:45" spellcheck="false" />
+                </div>
+                <div class="field">
+                  <label class="field-label" for="inDist">目标距离 · km</label>
+                  <input class="input" id="inDist" value="2.0" spellcheck="false" />
+                </div>
+              </div>
+
+              <div class="field mt-16" style="margin-top: 14px">
+                <div class="row" style="justify-content: space-between">
+                  <label class="field-label" for="inNoise">GPS 抖动强度</label>
+                  <span class="tiny mono" id="noiseVal">0.6</span>
+                </div>
+                <input
+                  class="slider"
+                  id="inNoise"
+                  type="range"
+                  min="0"
+                  max="1.6"
+                  step="0.05"
+                  value="0.6"
+                />
+              </div>
+
+              <div class="list-row" style="border-bottom: none; padding-bottom: 0">
+                <div class="list-main">
+                  <div class="list-title">拟真毛刺</div>
+                  <div class="list-desc">
+                    叠加多尺度步态漂移与稀疏野点，让轨迹更像真人跑出来的
+                  </div>
+                </div>
+                <button class="switch" id="swBurrs" role="switch" aria-checked="true"></button>
+              </div>
+            </div>
+
+            <div class="section-label">运行日志</div>
+            <div class="log" id="logBox">
+              <span class="log-empty">尚未开始</span>
+            </div>
+          </section>
+
+          <!-- ------------------------- 成绩 ------------------------- -->
+          <section class="page" id="page-stats">
+            <div class="section-label">汇总</div>
+
+            <div class="card">
+              <div class="metric-grid" style="margin-top: 0">
+                <div class="metric-cell">
+                  <div class="metric-key">有效</div>
+                  <div class="metric-val" id="sValid">—</div>
+                </div>
+                <div class="metric-cell">
+                  <div class="metric-key">无效</div>
+                  <div class="metric-val" id="sInvalid">—</div>
+                </div>
+                <div class="metric-cell">
+                  <div class="metric-key">累计里程</div>
+                  <div class="metric-val" id="sKm">—</div>
+                </div>
+                <div class="metric-cell">
+                  <div class="metric-key">平均配速</div>
+                  <div class="metric-val" id="sPace">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-label">场地分布</div>
+            <div class="card" id="sByPlace">
+              <div class="tiny">暂无数据</div>
+            </div>
+
+            <div class="section-label">记录明细</div>
+            <div class="card card-flush">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>场地</th>
+                      <th>距离</th>
+                      <th>用时</th>
+                      <th>配速</th>
+                      <th>结果</th>
+                    </tr>
+                  </thead>
+                  <tbody id="statsBody">
+                    <tr>
+                      <td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: 28px">
+                        点击右上角「刷新」载入成绩
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ------------------------- 指南 ------------------------- -->
+          <section class="page" id="page-guide">
+            <div class="section-label">身份</div>
+
+            <div class="card">
+              <div class="field">
+                <label class="field-label" for="inOpenid">OpenID</label>
+                <input
+                  class="input"
+                  id="inOpenid"
+                  placeholder="粘贴小程序里的 openid"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+              </div>
+              <button class="btn btn-primary btn-block mt-12" id="btnConnect">
+                保存并同步场地
+              </button>
+              <div class="tiny mt-8" id="connectMsg"></div>
+            </div>
+
+            <div class="section-label">首次配置</div>
+
+            <div class="card">
+              <div class="steps">
+                <div class="step">
+                  <div class="step-num">1</div>
+                  <div class="step-body">
+                    <div class="step-title">取得 OpenID</div>
+                    <div class="step-desc">
+                      在电脑端微信打开一次「重邮智慧体育」小程序并完成绑定，然后运行
+                      <code>python3 tools/get_openid.py</code>，把输出的 openid 粘到上面。
+                    </div>
+                  </div>
+                </div>
+                <div class="step">
+                  <div class="step-num">2</div>
+                  <div class="step-body">
+                    <div class="step-title">同步场地</div>
+                    <div class="step-desc">
+                      点「保存并同步场地」，拉取可打卡场地、电子围栏与配速规则。
+                    </div>
+                  </div>
+                </div>
+                <div class="step">
+                  <div class="step-num">3</div>
+                  <div class="step-body">
+                    <div class="step-title">设定参数</div>
+                    <div class="step-desc">
+                      在「运动」页选择场地、配速与距离。配速取规则区间中段最稳，距离按达标里程填。
+                    </div>
+                  </div>
+                </div>
+                <div class="step">
+                  <div class="step-num">4</div>
+                  <div class="step-body">
+                    <div class="step-title">到操场并通过人脸核验</div>
+                    <div class="step-desc">
+                      点「开始打卡」后把电脑留在一旁保持运行，本人到操场摄像头下走一趟。
+                      跑满目标距离会自动结算。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="banner mt-16">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 11v5M12 8h.01" />
+              </svg>
+              <span>
+                人脸检测在操场摄像头侧完成，工具无法绕开 —— 必须本人到场。
+              </span>
+            </div>
+          </section>
+
+          <!-- ------------------------- 设置 ------------------------- -->
+          <section class="page" id="page-settings">
+            <div class="section-label">外观</div>
+
+            <div class="card">
+              <div class="list-row" style="padding-top: 0">
+                <div class="list-main">
+                  <div class="list-title">主题</div>
+                  <div class="list-desc">跟随系统，或强制深色 / 浅色</div>
+                </div>
+                <div class="segmented" id="themeSeg">
+                  <button data-theme-val="system">跟随系统</button>
+                  <button data-theme-val="dark">深色</button>
+                  <button data-theme-val="light">浅色</button>
+                </div>
+              </div>
+
+              <div class="list-row">
+                <div class="list-main">
+                  <div class="list-title">随机种子</div>
+                  <div class="list-desc">同一个种子生成同一条轨迹；改它可换一条</div>
+                </div>
+                <input
+                  class="input"
+                  id="inSeed"
+                  value="0"
+                  style="width: 96px"
+                  spellcheck="false"
+                />
+              </div>
+            </div>
+
+            <div class="section-label">关于</div>
+
+            <div class="card">
+              <div class="list-row" style="padding-top: 0">
+                <div class="list-main">
+                  <div class="list-title">小雨run <span class="mono tiny" id="verText">v3.0.0</span></div>
+                  <div class="list-desc">
+                    Rust + Tauri 重写。轨迹计算与协议全部在本地完成，不申请定位权限，不收集数据。
+                  </div>
+                </div>
+              </div>
+
+              <div class="list-row">
+                <div class="list-main">
+                  <div class="list-title">开源仓库</div>
+                  <div class="list-desc mono" style="font-size: 11px">
+                    github.com/yhan-sun/xiaoyu-run
+                  </div>
+                </div>
+                <button class="btn" id="btnCopyRepo">复制链接</button>
+              </div>
+
+              <div class="list-row">
+                <div class="list-main">
+                  <div class="list-title">清空本地配置</div>
+                  <div class="list-desc">移除已保存的 OpenID 与参数</div>
+                </div>
+                <button class="btn" id="btnReset">清空</button>
+              </div>
+            </div>
+
+            <div class="tiny mt-16" style="text-align: center; padding: 8px 0 4px">
+              仅供个人学习与协议研究 · 请自觉遵守校纪校规
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div class="toast-host" id="toastHost"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

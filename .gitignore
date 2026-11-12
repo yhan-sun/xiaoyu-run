@@ -57,3 +57,13 @@ desktop.ini
 
 # 本地调试工具（adb 等），不入库
 .tools/
+
+# ─────────── Tauri / 前端 ───────────
+desktop/node_modules/
+desktop/dist/
+desktop/.npm-cache/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
+# Cargo 缓存（沙箱内构建用）
+.cargo-home/

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "XiaoYuRun",
+  "version": "3.0.0",
+  "identifier": "com.xiaoyu.run",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:5273",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "小雨run",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 1000,
+        "minHeight": 680,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "backgroundColor": "#0B0C0E"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Healthcare and Fitness",
+    "shortDescription": "极简的校园运动客户端",
+    "longDescription": "小雨run · 极简、克制的校园运动客户端。Rust 驱动，本地计算，不申请定位权限。"
+  }
+}

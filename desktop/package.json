@@ -1,0 +1,23 @@
+{
+  "name": "xiaoyu-run",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "description": "小雨run · 校园运动客户端（Rust + Tauri）",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "app": "tauri dev",
+    "app:build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}
