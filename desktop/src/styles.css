@@ -445,3 +445,21 @@ body {
     width: 100%;
   }
 }
+
+/* List 分组：与卡片同宽同圆角 */
+.group {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--adm-color-border);
+  --border-inner: 1px solid var(--adm-color-border);
+  --padding-left: 16px;
+  --padding-right: 16px;
+}
+
+.group .adm-list-body {
+  border: none;
+}
+
+.group .adm-list-item {
+  background: var(--adm-color-box);
+}

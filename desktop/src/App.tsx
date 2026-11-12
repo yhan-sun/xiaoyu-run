@@ -730,7 +730,7 @@ export default function App() {
         </Card>
 
         <SectionTitle>后台与电源</SectionTitle>
-        <Card>
+        <List className="group">
           <List.Item
             extra={
               <Switch
@@ -755,10 +755,10 @@ export default function App() {
                 ? `系统休眠设定：${power.sleepMinutes == null ? "从不" : `${power.sleepMinutes} 分钟`}`
                 : "—"}
           </div>
-        </Card>
+        </List>
 
         <SectionTitle>关于</SectionTitle>
-        <Card>
+        <List className="group">
           <List.Item
             description="Rust + Tauri · 轨迹与协议全部本地完成"
             extra={<Button size="mini" onClick={() => void Dialog.alert({ content: "小雨run v3.0.0" })}>版本</Button>}
@@ -789,7 +789,7 @@ export default function App() {
           >
             本地配置
           </List.Item>
-        </Card>
+        </List>
 
         <div className="foot-note">仅供个人学习与协议研究 · 请遵守校纪校规</div>
       </>
