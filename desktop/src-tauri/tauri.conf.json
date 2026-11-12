@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "小雨run",
-        "width": 1180,
-        "height": 800,
-        "minWidth": 1000,
-        "minHeight": 680,
+        "width": 430,
+        "height": 900,
+        "minWidth": 360,
+        "minHeight": 620,
         "resizable": true,
         "fullscreen": false,
         "center": true,
@@ -41,6 +41,9 @@
     ],
     "category": "Healthcare and Fitness",
     "shortDescription": "极简的校园运动客户端",
-    "longDescription": "小雨run · 极简、克制的校园运动客户端。Rust 驱动，本地计算，不申请定位权限。"
+    "longDescription": "小雨run · 极简、克制的校园运动客户端。Rust 驱动，本地计算，不申请定位权限。",
+    "android": {
+      "minSdkVersion": 24
+    }
   }
 }

@@ -77,6 +77,14 @@ interface Stats {
   rows: StatRow[];
 }
 
+interface PowerStatus {
+  platform: string;
+  caffeinate: boolean;
+  sleepMinutes: number | null;
+  onBattery: boolean;
+  runningAwake: boolean;
+}
+
 interface Config {
   openid: string;
   pace: string;
@@ -86,6 +94,7 @@ interface Config {
   seed: number;
   placeCode: string;
   theme: string;
+  keepAwake: boolean;
 }
 
 // ============================================================ DOM
@@ -139,6 +148,11 @@ const el = {
   themeSeg: $("themeSeg"),
   inSeed: $<HTMLInputElement>("inSeed"),
   btnReset: $<HTMLButtonElement>("btnReset"),
+
+  swKeepAwake: $<HTMLButtonElement>("swKeepAwake"),
+  powerInfo: $("powerInfo"),
+  btnPowerCheck: $<HTMLButtonElement>("btnPowerCheck"),
+  runPowerHint: $("runPowerHint"),
 
   toastHost: $("toastHost"),
 };
@@ -513,6 +527,8 @@ function setRunningUi(running: boolean) {
   el.inDist.disabled = running;
   el.inNoise.disabled = running;
   el.swBurrs.disabled = running;
+  const awake = state.config?.keepAwake ?? true;
+  el.runPowerHint.classList.toggle("hide", !(running && awake));
   if (running) setStatus("打卡中", "busy");
 }
 
@@ -561,6 +577,47 @@ async function runPreview() {
   }
 }
 
+
+// ============================================================ 电源与防休眠
+
+function renderPower(p: PowerStatus) {
+  const isMobile = p.platform === "android";
+
+  if (isMobile) {
+    // Android 没有「省电白名单」可申请：系统按进程优先级管理后台。
+    // 打卡期间唯一可靠的做法是保持应用在前台。
+    el.powerInfo.textContent = p.runningAwake
+      ? "打卡中 · 请保持应用在前台，不要切走或锁屏"
+      : "打卡期间请保持应用在前台，切到后台可能被系统挂起";
+    el.powerInfo.style.color = p.runningAwake ? "var(--success)" : "";
+    const desc = document.getElementById("keepAwakeDesc");
+    if (desc) {
+      desc.textContent =
+        "Android 没有可申请的省电白名单。打卡时请让本应用保持在前台（可调低亮度），切走或锁屏可能被系统挂起。";
+    }
+    return;
+  }
+
+  const parts: string[] = [];
+  if (p.sleepMinutes == null) {
+    parts.push("系统不会空闲休眠");
+  } else {
+    parts.push(`系统将在 ${p.sleepMinutes} 分钟空闲后休眠`);
+  }
+  parts.push(p.onBattery ? "电池供电" : "外接电源");
+  parts.push(p.caffeinate ? "休眠断言可用" : "缺少 caffeinate，无法阻止休眠");
+  if (p.runningAwake) parts.push("打卡中已阻止休眠");
+  el.powerInfo.textContent = parts.join(" · ");
+
+  const warn = (p.sleepMinutes != null && p.sleepMinutes <= 5) || !p.caffeinate;
+  el.powerInfo.style.color = warn ? "var(--warning)" : "";
+}
+
+async function refreshPower() {
+  const p = await call<PowerStatus>("power_status");
+  if (p) renderPower(p);
+}
+
 // ============================================================ 配置
 
 let saveTimer = 0;
@@ -578,6 +635,7 @@ function persist() {
       burrs: prm.burrs,
       seed: prm.seed,
       placeCode: prm.placeCode,
+      keepAwake: state.config.keepAwake,
     };
     await call("save_config", { config: state.config });
   }, 400);
@@ -668,6 +726,7 @@ async function doStart() {
       noise: prm.noise,
       burrs: prm.burrs,
       seed: prm.seed,
+      keepAwake: state.config?.keepAwake ?? true,
     },
   });
 
@@ -716,6 +775,9 @@ interface Probe {
   tauri: boolean;
   errors: string[];
   badge: string;
+  layout: string;
+  tabbarVisible: boolean;
+  sidebarVisible: boolean;
   preview: { ok: boolean; count: number; pace: number; inWindow: boolean; distanceM: number } | null;
   ms: number;
 }
@@ -755,6 +817,11 @@ async function sendProbe(t0: number) {
     tauri: isTauri,
     errors: jsErrors,
     badge: el.canvasBadge.textContent ?? "",
+    layout: window.innerWidth < 900 ? "mobile" : "desktop",
+    tabbarVisible:
+      getComputedStyle(document.querySelector(".tabbar") as HTMLElement).display !== "none",
+    sidebarVisible:
+      getComputedStyle(document.querySelector(".sidebar") as HTMLElement).display !== "none",
     preview: state.preview
       ? {
           ok: state.preview.ok,
@@ -775,7 +842,7 @@ function switchPage(name: string) {
   document.querySelectorAll<HTMLElement>(".page").forEach((p) => {
     p.classList.toggle("active", p.id === `page-${name}`);
   });
-  document.querySelectorAll<HTMLElement>(".nav-item").forEach((n) => {
+  document.querySelectorAll<HTMLElement>("[data-page]").forEach((n) => {
     n.classList.toggle("active", n.dataset.page === name);
   });
   const titles: Record<string, string> = {
@@ -791,7 +858,7 @@ function switchPage(name: string) {
 
 async function init() {
   // 导航
-  document.querySelectorAll<HTMLElement>(".nav-item").forEach((n) => {
+  document.querySelectorAll<HTMLElement>("[data-page]").forEach((n) => {
     n.addEventListener("click", () => switchPage(n.dataset.page ?? "run"));
   });
 
@@ -836,6 +903,20 @@ async function init() {
   el.btnCancel.addEventListener("click", doCancel);
   el.btnConnect.addEventListener("click", doConnect);
   el.btnRefresh.addEventListener("click", doStats);
+  el.swKeepAwake.addEventListener("click", () => {
+    const on = el.swKeepAwake.getAttribute("aria-checked") === "true";
+    el.swKeepAwake.setAttribute("aria-checked", String(!on));
+    if (state.config) state.config.keepAwake = !on;
+    persist();
+    toast(!on ? "打卡时将阻止系统休眠" : "已关闭防休眠", !on ? "ok" : "");
+  });
+  el.btnPowerCheck.addEventListener("click", async () => {
+    el.btnPowerCheck.disabled = true;
+    await refreshPower();
+    el.btnPowerCheck.disabled = false;
+    toast("电源状态已刷新", "ok");
+  });
+
   el.btnReset.addEventListener("click", async () => {
     if (!state.config) return;
     state.config = {
@@ -847,6 +928,7 @@ async function init() {
       seed: 0,
       placeCode: "",
       theme: state.config.theme,
+      keepAwake: state.config.keepAwake,
     };
     el.inOpenid.value = "";
     el.inPace.value = "5:45";
@@ -855,6 +937,7 @@ async function init() {
     el.noiseVal.textContent = "0.60";
     el.inSeed.value = "0";
     el.swBurrs.setAttribute("aria-checked", "true");
+    el.swKeepAwake.setAttribute("aria-checked", String(state.config.keepAwake ?? true));
     state.areas = [];
     state.preview = null;
     renderPlaceOptions();
@@ -876,6 +959,7 @@ async function init() {
     seed: 0,
     placeCode: "",
     theme: "system",
+    keepAwake: true,
   };
 
   el.inOpenid.value = state.config.openid ?? "";
@@ -885,11 +969,13 @@ async function init() {
   el.noiseVal.textContent = Number(state.config.noise ?? 0.6).toFixed(2);
   el.inSeed.value = String(state.config.seed ?? 0);
   el.swBurrs.setAttribute("aria-checked", String(state.config.burrs ?? true));
+  el.swKeepAwake.setAttribute("aria-checked", String(state.config.keepAwake ?? true));
 
   applyTheme(state.config.theme ?? "system");
 
   renderPlaceOptions();
   drawCanvas();
+  refreshPower();
   // 首次进入就渲染一版轨迹（未同步场地时走内置示例跑道）
   schedulePreview(true);
 
@@ -903,9 +989,11 @@ async function init() {
         setStatus("已完成", "ok");
         toast("打卡完成", "ok");
         runPreview();
+        refreshPower();
       } else if (e.payload.failed) {
         setRunningUi(false);
         setStatus("已中断", "bad");
+        refreshPower();
       } else {
         setRunningUi(true);
       }

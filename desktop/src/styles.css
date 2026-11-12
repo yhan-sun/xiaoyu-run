@@ -30,6 +30,7 @@
   --danger: #ff453a;
   --danger-dim: rgba(255, 69, 58, 0.12);
 
+  --nav-bg: rgba(11, 12, 14, 0.82);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.42);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -72,6 +73,7 @@
   --danger: #d70015;
   --danger-dim: rgba(215, 0, 21, 0.08);
 
+  --nav-bg: rgba(249, 249, 251, 0.86);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.12);
@@ -1198,5 +1200,245 @@ code,
   }
   .split-3 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   手机布局
+   最终产物是 Android App，桌面窗口只作为 UI/UX 测试台。
+   断点 900px：更窄走手机（底部标签栏 / 单列 / 安全区），更宽保留侧栏。
+   ========================================================================= */
+
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  /* ---------- 外壳 ---------- */
+  .app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    height: 100vh;
+  }
+
+  /* 顶栏：精灵刘海留白 + 大标题 */
+  .main-header {
+    height: auto;
+    flex: 0 0 auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px 10px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--bg);
+  }
+
+  .main-title {
+    font-size: 22px;
+    font-weight: 680;
+    letter-spacing: -0.025em;
+  }
+
+  .main-header-actions .btn {
+    height: 30px;
+    padding: 0 11px;
+    font-size: 12.5px;
+  }
+
+  .scroll {
+    padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 92px);
+  }
+
+  .page {
+    max-width: none;
+  }
+
+  /* ---------- 卡片 ---------- */
+  .card {
+    border-radius: var(--r-md);
+    padding: 16px;
+  }
+
+  .section-label {
+    margin: 20px 0 8px;
+    padding-left: 2px;
+  }
+
+  /* ---------- 仪表盘 ---------- */
+  .hero-value {
+    font-size: 46px;
+    letter-spacing: -0.03em;
+  }
+
+  .hero-unit {
+    font-size: 14px;
+  }
+
+  .hero-total {
+    font-size: 17px;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 14px;
+  }
+
+  .metric-cell {
+    padding: 10px 12px;
+  }
+
+  .metric-val {
+    font-size: 15px;
+  }
+
+  .canvas-wrap {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+    margin-top: 14px;
+  }
+
+  /* ---------- 表单：触控尺寸 ---------- */
+  .input,
+  .select {
+    height: 42px;
+    font-size: 15px;
+    border-radius: 9px;
+  }
+
+  .btn {
+    height: 42px;
+    border-radius: 9px;
+    font-size: 14.5px;
+  }
+
+  .btn-lg {
+    height: 50px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+
+  .switch {
+    width: 46px;
+    height: 28px;
+    border-radius: 14px;
+  }
+
+  .switch::after {
+    width: 24px;
+    height: 24px;
+  }
+
+  .switch[aria-checked="true"]::after {
+    transform: translateX(18px);
+  }
+
+  .slider::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+    margin-top: -8px;
+  }
+
+  .segmented button {
+    height: 32px;
+    padding: 0 13px;
+    font-size: 13px;
+  }
+
+  .list-row {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  /* 表格横向可滚动，不要挤成一团 */
+  .table-wrap {
+    overflow-x: auto;
+    max-height: none;
+  }
+
+  .table {
+    min-width: 520px;
+  }
+
+  .log {
+    height: 190px;
+    font-size: 10.5px;
+  }
+
+  .split {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* ---------- 底部标签栏 ---------- */
+  .tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    height: calc(env(safe-area-inset-bottom, 0px) + 58px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--nav-bg);
+    backdrop-filter: saturate(180%) blur(22px);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    border-top: 1px solid var(--hairline);
+  }
+
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 550;
+    letter-spacing: 0.01em;
+    cursor: default;
+    padding: 6px 0 4px;
+    transition: color var(--dur) var(--ease);
+  }
+
+  .tab svg {
+    width: 22px;
+    height: 22px;
+    transition: transform var(--dur) var(--ease);
+  }
+
+  .tab.active {
+    color: var(--accent);
+  }
+
+  .tab.active svg {
+    transform: translateY(-1px) scale(1.04);
+  }
+
+  .toast-host {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+    align-items: center;
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+}
+
+/* Mac 上只是 UI 测试台：窗口顶部有红绿灯，
+   用 (hover: hover) 区分鼠标设备，给标题让出位置。
+   真机 Android 没有鼠标，不会命中这条。 */
+@media (max-width: 899px) and (hover: hover) {
+  .main-header {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 40px);
   }
 }

@@ -10,6 +10,7 @@ mod track;
 
 use api::{Api, Resp};
 use serde::{Deserialize, Serialize};
+use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, State};
@@ -399,6 +400,108 @@ fn preview(
     }
 }
 
+
+// ------------------------------------------------------------------ 防休眠
+
+/// 打卡期间阻止系统空闲休眠。
+///
+/// macOS 上等价于 `caffeinate -i`：只在应用存活期间生效，进程退出自动解除。
+/// 用子进程而不是私有 API，是因为 macOS 不提供「省电白名单」这种系统级开关，
+/// 正确做法就是持有休眠断言。App Nap 另外由 Info.plist 的 NSAppSleepDisabled 关闭。
+struct SleepGuard {
+    child: Option<Child>,
+}
+
+impl SleepGuard {
+    fn acquire() -> Self {
+        let pid = std::process::id().to_string();
+        let child = Command::new("/usr/bin/caffeinate")
+            .args(["-i", "-w", &pid])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .ok();
+        Self { child }
+    }
+
+    fn ok(&self) -> bool {
+        self.child.is_some()
+    }
+}
+
+impl Drop for SleepGuard {
+    fn drop(&mut self) {
+        if let Some(mut c) = self.child.take() {
+            let _ = c.kill();
+            let _ = c.wait();
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PowerStatus {
+    /// macos / android / other
+    platform: String,
+    /// /usr/bin/caffeinate 是否可用
+    caffeinate: bool,
+    /// 系统休眠设定（分钟），None = 从不休眠
+    sleep_minutes: Option<i64>,
+    /// 是否电池供电
+    on_battery: bool,
+    /// 是否有打卡正在阻止休眠
+    running_awake: bool,
+}
+
+/// 读取当前电源与休眠设定，供设置页展示。
+#[tauri::command]
+fn power_status(app: tauri::AppHandle) -> PowerStatus {
+    let platform = if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "android") {
+        "android"
+    } else {
+        "other"
+    }
+    .to_string();
+    let caffeinate = cfg!(target_os = "macos") && std::path::Path::new("/usr/bin/caffeinate").exists();
+
+    let mut sleep_minutes = None;
+    let mut on_battery = false;
+
+    if let Ok(out) = Command::new("/usr/bin/pmset").arg("-g").output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        for line in text.lines() {
+            let t = line.trim_start();
+            let mut it = t.split_whitespace();
+            if it.next() == Some("sleep") {
+                if let Some(v) = it.next().and_then(|v| v.parse::<i64>().ok()) {
+                    sleep_minutes = if v <= 0 { None } else { Some(v) };
+                }
+            }
+        }
+    }
+
+    if let Ok(out) = Command::new("/usr/bin/pmset").arg("-g").arg("batt").output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        on_battery = text.contains("Battery Power");
+    }
+
+    let running_awake = app
+        .try_state::<Runner>()
+        .map(|r| r.active.load(Ordering::SeqCst))
+        .unwrap_or(false);
+
+    PowerStatus {
+        platform,
+        caffeinate,
+        sleep_minutes,
+        on_battery,
+        running_awake,
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RunRequest {
@@ -409,6 +512,12 @@ struct RunRequest {
     noise: f64,
     burrs: bool,
     seed: i64,
+    #[serde(default = "default_true")]
+    keep_awake: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[tauri::command]
@@ -445,6 +554,13 @@ fn start_run(
         let mut api = Api::new();
         api.reset(&oid);
 
+        // 整个打卡期间持有休眠断言，线程退出时随之释放
+        let guard = if req.keep_awake && cfg!(target_os = "macos") {
+            SleepGuard::acquire()
+        } else {
+            SleepGuard { child: None }
+        };
+
         let emitter = app.clone();
         let log = move |m: String| {
             let _ = emitter.emit("run-log", m);
@@ -467,6 +583,14 @@ fn start_run(
                     api.token = t.to_string();
                     log(format!("✓ token = {}", api::mask(t)));
                 }
+            }
+        }
+
+        if req.keep_awake && cfg!(target_os = "macos") {
+            if guard.ok() {
+                log("已阻止系统空闲休眠（caffeinate）".into());
+            } else {
+                log("⚠ 无法阻止系统休眠，长跑可能被中断".into());
             }
         }
 
@@ -553,6 +677,7 @@ pub fn run() {
             start_run,
             cancel_run,
             get_stats,
+            power_status,
             ui_probe,
             app_version
         ])
