@@ -346,6 +346,17 @@ export default function App() {
   const scanQr = useCallback(async () => {
     try {
       const mod = await import("@tauri-apps/plugin-barcode-scanner");
+
+      // 安卓必须运行时授予相机权限，否则插件会直接抛错
+      const perm = await mod.checkPermissions();
+      if (perm !== "granted") {
+        const asked = await mod.requestPermissions();
+        if (asked !== "granted") {
+          Toast.show({ icon: "fail", content: "没有相机权限，请在系统设置里允许" });
+          return;
+        }
+      }
+
       const res = await mod.scan({ windowed: true, formats: [mod.Format.QRCode] });
       const raw = typeof res === "string" ? res : (res as { content?: string })?.content ?? "";
       const clean = sanitizeOpenid(raw);
@@ -357,7 +368,16 @@ export default function App() {
       update({ openid: clean });
       Toast.show({ icon: "success", content: "已扫码填入" });
     } catch (e) {
-      Toast.show({ icon: "fail", content: `扫码失败：${String(e)}` });
+      // 插件抛的是对象，直接 String() 会变成 [object Object]
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === "object" && e !== null
+            ? (e as { message?: string; error?: string }).message ??
+              (e as { error?: string }).error ??
+              JSON.stringify(e)
+            : String(e);
+      Toast.show({ icon: "fail", content: `扫码失败：${msg}` });
     }
   }, [update]);
 
@@ -768,16 +788,16 @@ export default function App() {
           >
             打卡时保持唤醒
           </List.Item>
-          <div className="hint">
-            {power?.platform === "android"
-              ? running
-                ? "打卡中 · 请勿切走或锁屏"
-                : "切到后台可能被系统挂起"
-              : power
-                ? `系统休眠设定：${power.sleepMinutes == null ? "从不" : `${power.sleepMinutes} 分钟`}`
-                : "—"}
-          </div>
         </List>
+        <div className="hint" style={{ paddingLeft: 4 }}>
+          {power?.platform === "android"
+            ? running
+              ? "打卡中 · 请勿切走或锁屏"
+              : "切到后台可能被系统挂起"
+            : power
+              ? `系统休眠设定：${power.sleepMinutes == null ? "从不" : `${power.sleepMinutes} 分钟`}`
+              : "—"}
+        </div>
 
         <SectionTitle>关于</SectionTitle>
         <List className="group">

@@ -221,6 +221,16 @@
     <script>
       const invoke = window.__TAURI__.core.invoke;
 
+      // 首帧画完再显示窗口，避免白屏等待
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.__TAURI__.window
+            .getCurrentWindow()
+            .show()
+            .catch(() => {});
+        });
+      });
+
       const $ = (id) => document.getElementById(id);
       const btnGet = $("btnGet");
       const hint = $("hint");

@@ -92,12 +92,9 @@ fn copy_text(text: String) -> bool {
 
 fn main() {
     tauri::Builder::default()
-        .setup(|app| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.show();
-            }
-            Ok(())
-        })
+        // 不在 setup 里抢着显示：等前端首帧画完自己调 show，
+        // 否则用户会盯着一段空白窗口，感觉"打开很慢"。
+
         .invoke_handler(tauri::generate_handler![
             extract_openid,
             open_privacy_settings,

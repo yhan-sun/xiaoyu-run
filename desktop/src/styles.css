@@ -570,3 +570,13 @@ html[data-prefers-color-scheme="light"] .group {
   font-weight: 680;
   letter-spacing: -0.02em;
 }
+
+/* 两列表单：两个 field 的标签必须同一水平线 */
+.two-col .field {
+  margin-top: 0;
+}
+
+/* List 里的 hint 不再溢出卡片 */
+.group + .hint {
+  margin-top: 8px;
+}

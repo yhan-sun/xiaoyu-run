@@ -85,5 +85,5 @@
 /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/objc2-0.6.5/src/../examples/class_with_lifetime.rs:
 
 # env-dep:CARGO_PKG_VERSION=0.6.5
-# env-dep:MACOSX_DEPLOYMENT_TARGET=10.13
+# env-dep:MACOSX_DEPLOYMENT_TARGET
 # env-dep:UNSAFE_OBJC2_ALLOW_CLASS_OVERRIDE
