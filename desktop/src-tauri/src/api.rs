@@ -23,7 +23,7 @@ fn http_error(code: u16, text: &str) -> String {
 
 #[cfg(test)]
 mod http_error_tests {
-    use super::http_error;
+    use super::{http_error, Api};
 
     #[test]
     fn summarizes_waf_html_without_claiming_success() {
@@ -31,6 +31,32 @@ mod http_error_tests {
         assert!(message.contains("403"));
         assert!(message.contains("拦截"));
         assert!(!message.contains("<!DOCTYPE"));
+    }
+
+    #[test]
+    fn end_request_uses_bodyless_post() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+            let mut bytes = Vec::new();
+            let mut buffer = [0; 1024];
+            while !bytes.ends_with(b"\r\n\r\n") {
+                let n = stream.read(&mut buffer).unwrap();
+                assert!(n > 0);
+                bytes.extend_from_slice(&buffer[..n]);
+            }
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}").unwrap();
+            String::from_utf8(bytes).unwrap()
+        });
+        let mut api = Api::new();
+        assert!(api.call("POST", &format!("http://{address}/end"), None, false).is_some());
+        let request = server.join().unwrap().to_ascii_lowercase();
+        assert!(request.starts_with("post /end http/1.1\r\n"));
+        assert!(!request.contains("content-length:"));
+        assert!(!request.contains("transfer-encoding:"));
     }
 }
 
