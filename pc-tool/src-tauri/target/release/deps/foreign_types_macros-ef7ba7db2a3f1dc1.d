@@ -1,0 +1,7 @@
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/foreign_types_macros-ef7ba7db2a3f1dc1.d: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/build.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/parse.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/libforeign_types_macros-ef7ba7db2a3f1dc1.dylib: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/build.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/parse.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/lib.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/build.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/foreign-types-macros-0.2.4/src/parse.rs:

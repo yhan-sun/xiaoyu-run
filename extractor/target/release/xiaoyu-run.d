@@ -1,1 +1,0 @@
-/Users/pyu/code/cqupt/CQUPT-MockRunning/extractor/target/release/xiaoyu-run: /Users/pyu/code/cqupt/CQUPT-MockRunning/crates/wxopenid/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/extractor/src/main.rs

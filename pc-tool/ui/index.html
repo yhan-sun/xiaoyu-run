@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小雨run · 取码</title>
+    <style>
+      html[data-theme="dark"] {
+        --bg: #0b0c0e;
+        --card: #16181c;
+        --line: rgba(255, 255, 255, 0.09);
+        --text: #f2f3f5;
+        --weak: #85888f;
+        --accent: #0a84ff;
+        --ok: #30d158;
+        --warn: #ff9f0a;
+        --bad: #ff453a;
+      }
+      html[data-theme="light"] {
+        --bg: #f2f2f7;
+        --card: #ffffff;
+        --line: rgba(0, 0, 0, 0.08);
+        --text: #1c1c1e;
+        --weak: #7c7c82;
+        --accent: #007aff;
+        --ok: #248a3d;
+        --warn: #c77700;
+        --bad: #d70015;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        font-size: 13.5px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      header {
+        padding: 18px 20px 12px;
+        -webkit-app-region: drag;
+      }
+      h1 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        margin-top: 3px;
+        font-size: 12px;
+        color: var(--weak);
+      }
+
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0 20px 16px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+      }
+
+      button {
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 560;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        padding: 10px 14px;
+        cursor: default;
+        transition: transform 90ms ease, background 160ms ease, opacity 160ms ease;
+      }
+      button:active {
+        transform: scale(0.985);
+      }
+      button:disabled {
+        opacity: 0.45;
+      }
+      .primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+      }
+      .primary:hover {
+        filter: brightness(1.06);
+      }
+      .block {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 15px;
+      }
+
+      .qr-wrap {
+        display: flex;
+        gap: 16px;
+        margin-top: 14px;
+      }
+      .qr {
+        width: 152px;
+        height: 152px;
+        flex: 0 0 152px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 6px;
+        display: grid;
+        place-items: center;
+      }
+      .qr svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .qr-side {
+        flex: 1;
+        min-width: 0;
+      }
+      .label {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--weak);
+      }
+      .openid {
+        margin-top: 3px;
+        font-family: "SF Mono", ui-monospace, Consolas, monospace;
+        font-size: 12.5px;
+        line-height: 1.5;
+        word-break: break-all;
+        user-select: text;
+      }
+      .hint {
+        margin-top: 10px;
+        font-size: 11.5px;
+        line-height: 1.6;
+        color: var(--weak);
+      }
+      .hint.bad {
+        color: var(--bad);
+      }
+      .hint.ok {
+        color: var(--ok);
+      }
+      .hint.warn {
+        color: var(--warn);
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .row > button {
+        flex: 1;
+      }
+
+      footer {
+        padding: 10px 20px 16px;
+        border-top: 1px solid var(--line);
+        font-size: 11.5px;
+        color: var(--weak);
+        line-height: 1.6;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>小雨run · 取码</h1>
+      <div class="sub">读取本机微信缓存，提取 OpenID</div>
+    </header>
+
+    <main>
+      <div class="card">
+        <button id="btnGet" class="primary block">获取 OpenID</button>
+        <div class="hint" id="hint">
+          先在电脑微信里打开一次「重邮智慧体育」小程序并完成绑定，再点上面的按钮。
+        </div>
+
+        <div id="result" class="hidden">
+          <div class="qr-wrap">
+            <div class="qr" id="qr"></div>
+            <div class="qr-side">
+              <div class="label">OpenID</div>
+              <div class="openid" id="openid">—</div>
+              <div class="hint" id="source"></div>
+            </div>
+          </div>
+          <div class="row">
+            <button id="btnCopy">复制</button>
+            <button id="btnAgain">重新获取</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      手机上打开小雨run →「指南」→ 扫码，或手动粘贴这串 OpenID。只需一次，之后永久保存。
+    </footer>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+
+      const $ = (id) => document.getElementById(id);
+      const btnGet = $("btnGet");
+      const hint = $("hint");
+      const result = $("result");
+      const qrBox = $("qr");
+      const openidEl = $("openid");
+      const sourceEl = $("source");
+
+      let current = "";
+
+      function setHint(text, kind) {
+        hint.textContent = text;
+        hint.className = "hint" + (kind ? " " + kind : "");
+      }
+
+      async function get() {
+        btnGet.disabled = true;
+        btnGet.textContent = "扫描中 …";
+        setHint("正在读取本机微信缓存 …");
+
+        try {
+          const res = await invoke("extract_openid");
+          const hit = res.found.find((f) => f.cqupt) || res.found[0];
+
+          if (!hit) {
+            result.classList.add("hidden");
+            current = "";
+            if (res.deniedDirs > 0) {
+              setHint(res.note, "bad");
+              addPrivacyButton();
+            } else {
+              setHint(res.note, "warn");
+            }
+            return;
+          }
+
+          current = hit.openid;
+          openidEl.textContent = hit.openid;
+          qrBox.innerHTML = res.qr || "";
+          sourceEl.textContent = hit.cqupt
+            ? "✓ 来自重邮智慧体育的缓存"
+            : "⚠ 这条不属于重邮智慧体育";
+          sourceEl.className = "hint " + (hit.cqupt ? "ok" : "warn");
+          result.classList.remove("hidden");
+          setHint(`扫描 ${res.scannedDirs} 个目录、${res.scannedFiles} 个文件`);
+        } catch (e) {
+          setHint("出错了：" + String(e), "bad");
+        } finally {
+          btnGet.disabled = false;
+          btnGet.textContent = "获取 OpenID";
+        }
+      }
+
+      function addPrivacyButton() {
+        if ($("btnPrivacy")) return;
+        const b = document.createElement("button");
+        b.id = "btnPrivacy";
+        b.className = "block";
+        b.style.marginTop = "10px";
+        b.textContent = "打开系统设置授权";
+        b.onclick = () => invoke("open_privacy_settings");
+        hint.after(b);
+      }
+
+      btnGet.onclick = get;
+      $("btnAgain").onclick = get;
+      $("btnCopy").onclick = async () => {
+        if (!current) return;
+        await invoke("copy_text", { text: current });
+        const old = $("btnCopy").textContent;
+        $("btnCopy").textContent = "已复制";
+        setTimeout(() => ($("btnCopy").textContent = old), 1200);
+      };
+    </script>
+  </body>
+</html>

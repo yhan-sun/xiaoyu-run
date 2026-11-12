@@ -1,0 +1,9 @@
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/potential_utf-29d1a094cda8a14c.d: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/uchar.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/ustr.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/libpotential_utf-29d1a094cda8a14c.rlib: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/uchar.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/ustr.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/libpotential_utf-29d1a094cda8a14c.rmeta: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/uchar.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/ustr.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/lib.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/uchar.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/potential_utf-0.1.6/src/ustr.rs:

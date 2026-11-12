@@ -1,0 +1,9 @@
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/alloc_stdlib-168276a9545e7c15.d: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/heap_alloc.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/std_alloc.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/liballoc_stdlib-168276a9545e7c15.rlib: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/heap_alloc.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/std_alloc.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/release/deps/liballoc_stdlib-168276a9545e7c15.rmeta: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/heap_alloc.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/std_alloc.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/lib.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/heap_alloc.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/alloc-stdlib-0.3.0/src/std_alloc.rs:

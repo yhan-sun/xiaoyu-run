@@ -1,0 +1,23 @@
+[package]
+name = "xiaoyu-run"
+version = "3.0.0"
+edition = "2021"
+description = "小雨run 取码工具"
+
+[[bin]]
+name = "xiaoyu-run"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+wxopenid = { path = "../../crates/wxopenid" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

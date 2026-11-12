@@ -667,11 +667,9 @@ export default function App() {
             >
               保存并同步场地
             </Button>
-            {isPhone && (
-              <Button block onClick={() => void scanQr()}>
-                扫码
-              </Button>
-            )}
+            <Button block onClick={() => void scanQr()}>
+              扫码
+            </Button>
           </div>
         </Card>
 

@@ -1,0 +1,9 @@
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/debug/deps/find_msvc_tools-99bfcdb377bab7de.d: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/find_tools.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/tool.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/debug/deps/libfind_msvc_tools-99bfcdb377bab7de.rlib: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/find_tools.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/tool.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/debug/deps/libfind_msvc_tools-99bfcdb377bab7de.rmeta: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/find_tools.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/tool.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/lib.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/find_tools.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/find-msvc-tools-0.1.15/src/tool.rs:

@@ -1,0 +1,9 @@
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/debug/deps/core_graphics_types-1bb04905903194c1.d: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/base.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/geometry.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/debug/deps/libcore_graphics_types-1bb04905903194c1.rlib: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/base.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/geometry.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/pc-tool/src-tauri/target/debug/deps/libcore_graphics_types-1bb04905903194c1.rmeta: /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/lib.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/base.rs /Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/geometry.rs
+
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/lib.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/base.rs:
+/Users/pyu/code/cqupt/CQUPT-MockRunning/.cargo-home/registry/src/rsproxy.cn-e3de039b2554c837/core-graphics-types-0.2.0/src/geometry.rs:

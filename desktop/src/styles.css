@@ -3,6 +3,34 @@
    组件样式全部交给 antd-mobile，这里只处理布局、主题令牌与少量排版。
    ========================================================================= */
 
+
+/* ---------------- 设计令牌：覆盖 antd-mobile 默认色板 ---------------- */
+
+html[data-prefers-color-scheme="dark"] {
+  --adm-color-background: #0b0c0e;
+  --adm-color-box: #16181c;
+  --adm-color-border: rgba(255, 255, 255, 0.09);
+  --adm-color-text: #f2f3f5;
+  --adm-color-text-secondary: #b9bcc2;
+  --adm-color-weak: #85888f;
+  --adm-color-light: #6a6e76;
+  --adm-color-fill-content: #16181c;
+  --adm-color-primary: #0a84ff;
+  --adm-font-size-main: 14px;
+}
+
+html[data-prefers-color-scheme="light"] {
+  --adm-color-background: #f2f2f7;
+  --adm-color-box: #ffffff;
+  --adm-color-border: rgba(0, 0, 0, 0.08);
+  --adm-color-text: #1c1c1e;
+  --adm-color-text-secondary: #4a4a4f;
+  --adm-color-weak: #7c7c82;
+  --adm-color-light: #9a9aa0;
+  --adm-color-fill-content: #ffffff;
+  --adm-color-primary: #007aff;
+}
+
 :root {
   --adm-color-primary: #0a84ff;
   --adm-color-success: #30d158;
