@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    android:id="@+id/panelStats"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:overScrollMode="never"
+    android:paddingBottom="100dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp">
+
+        <!-- 统计刷新动作栏 -->
+        <Button
+            android:id="@+id/btnRefreshStats"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/btn_ghost"
+            android:letterSpacing="0.02"
+            android:stateListAnimator="@null"
+            android:text="@string/b_refresh_stats"
+            android:textAllCaps="false"
+            android:textColor="@color/accent"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- 汇总数据卡片 -->
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/l_stats" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/box"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:id="@+id/tvStatsSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="6dp"
+                android:text="@string/stats_hint"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <!-- 场地分布卡片 -->
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/l_stats_place" />
+
+        <TextView
+            android:id="@+id/tvStatsByPlace"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/box"
+            android:lineSpacingExtra="5dp"
+            android:padding="16dp"
+            android:text="@string/stats_dash"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <!-- 记录列表卡片 -->
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/l_stats_list" />
+
+        <TextView
+            android:id="@+id/tvStatsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/box"
+            android:fontFamily="monospace"
+            android:lineSpacingExtra="4dp"
+            android:padding="16dp"
+            android:text="@string/stats_dash"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>

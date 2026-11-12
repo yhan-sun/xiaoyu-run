@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    android:id="@+id/panelStart"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:overScrollMode="never"
+    android:paddingBottom="100dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp">
+
+        <!-- 身份认证卡片 -->
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/grp_account" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/box"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="微信智慧体育凭证"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etOpenid"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/box"
+                android:gravity="center_vertical"
+                android:hint="@string/h_openid"
+                android:inputType="textNoSuggestions"
+                android:maxLines="1"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_tertiary"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btnConnect"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/btn_solid"
+                android:letterSpacing="0.02"
+                android:stateListAnimator="@null"
+                android:text="@string/b_connect"
+                android:textAllCaps="false"
+                android:textColor="@color/on_accent"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 取码与辅助卡片 -->
+        <Button
+            android:id="@+id/btnToggleOpenidHelp"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/btn_ghost"
+            android:stateListAnimator="@null"
+            android:text="@string/b_openid_help"
+            android:textAllCaps="false"
+            android:textColor="@color/accent"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:id="@+id/panelOpenidHelp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/box"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="5dp"
+                android:text="@string/help_body"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnCopyScript"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_ghost"
+                    android:stateListAnimator="@null"
+                    android:text="@string/b_copy_script"
+                    android:textAllCaps="false"
+                    android:textColor="@color/accent"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnShareScript"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_ghost"
+                    android:stateListAnimator="@null"
+                    android:text="@string/b_share_script"
+                    android:textAllCaps="false"
+                    android:textColor="@color/accent"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnViewScript"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/btn_ghost"
+                android:stateListAnimator="@null"
+                android:text="@string/b_view_script"
+                android:textAllCaps="false"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <ScrollView
+                android:id="@+id/scriptScroll"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/box"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvScript"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- 使用教程卡片 -->
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/tutorial_title" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/box"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="6dp"
+                android:text="@string/tutorial_body"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

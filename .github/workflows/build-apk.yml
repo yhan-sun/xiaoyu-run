@@ -1,0 +1,77 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests
+        run: ./gradlew test --stacktrace
+
+      - name: Build Debug & Release APK
+        run: ./gradlew assembleDebug assembleRelease --stacktrace
+
+      - name: Prepare APK Artifacts
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk dist/XiaoYuRun-v2.0.0-release.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/XiaoYuRun-v2.0.0-debug.apk
+          ls -la dist/
+
+      - name: Upload APKs to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: XiaoYuRun-APKs
+          path: dist/*.apk
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.0
+          name: "小雨run v2.0.0"
+          body: |
+            ### 小雨run v2.0.0 正式发布 🎉
+
+            极简、优雅的校园运动辅助客户端，遵循 Apple 人机交互设计规范（HIG）全新重构。
+
+            #### 核心特性
+            - 🏃 **Apple 级美学界面**：全黑纯粹深色模式与温润浅色自适应，精致卡片布局。
+            - 📊 **实时拟真动态跑道**：内置动态跑道画板，实时渲染跑动进度与呼吸脉冲。
+            - 🧭 **智能轨迹与规避**：严格遵循操场电子围栏边界，自动绕开禁跑区，多尺度步态漂移。
+            - 🔋 **后台持续巡航**：前台服务与 CPU 锁保障，锁屏放入口袋也能平稳打卡。
+            - 🛡️ **纯本地零上报**：不申请定位权限，不收集个人信息，凭证持久保存在本地。
+
+            #### 下载安装
+            - **[XiaoYuRun-v2.0.0-release.apk](https://github.com/yhan-sun/xiaoyu-run/releases/download/v2.0.0/XiaoYuRun-v2.0.0-release.apk)** (推荐)
+            - **[XiaoYuRun-v2.0.0-debug.apk](https://github.com/yhan-sun/xiaoyu-run/releases/download/v2.0.0/XiaoYuRun-v2.0.0-debug.apk)**
+          files: dist/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

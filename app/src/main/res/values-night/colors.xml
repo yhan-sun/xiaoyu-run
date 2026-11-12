@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小雨run · 深色设计系统 (Apple HIG 深色规范)
+  全黑 #000000 极简画布，配合 #1C1C1E 细腻悬浮卡片与高对比度高亮。
+-->
+<resources>
+    <!-- 画布与卡片 -->
+    <color name="bg">#000000</color>
+    <color name="surface">#1C1C1E</color>
+    <color name="surface_secondary">#2C2C2E</color>
+    <color name="surface_tertiary">#3A3A3C</color>
+    <color name="card_stroke">#2C2C2E</color>
+
+    <!-- 文本体系 -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#8E8E93</color>
+    <color name="text_tertiary">#636366</color>
+
+    <!-- 品牌主色：Apple System Blue (Dark) -->
+    <color name="accent">#0A84FF</color>
+    <color name="on_accent">#FFFFFF</color>
+    <color name="accent_soft">#162842</color>
+    <color name="accent_stroke">#1E497A</color>
+
+    <!-- 状态语义色 -->
+    <color name="success">#30D158</color>
+    <color name="on_success">#000000</color>
+    <color name="success_soft">#143320</color>
+    <color name="success_stroke">#1E5E35</color>
+
+    <color name="warning">#FF9F0A</color>
+    <color name="on_warning">#000000</color>
+    <color name="warning_soft">#3D2708</color>
+
+    <color name="danger">#FF453A</color>
+    <color name="on_danger">#FFFFFF</color>
+    <color name="danger_soft">#3C1615</color>
+    <color name="danger_stroke">#702321</color>
+
+    <!-- 底部悬浮栏 -->
+    <color name="nav_bar_bg">#1C1C1EE6</color>
+    <color name="nav_bar_stroke">#2C2C2E</color>
+
+    <!-- 运行日志与代码 -->
+    <color name="log_text">#E5E5EA</color>
+    <color name="log_bg">#121214</color>
+
+    <!-- 兼容旧映射 -->
+    <color name="fg">#FFFFFF</color>
+    <color name="fg_dim">#8E8E93</color>
+    <color name="box">#1C1C1E</color>
+    <color name="box_stroke">#2C2C2E</color>
+    <color name="log">#E5E5EA</color>
+    <color name="ok">#30D158</color>
+    <color name="ok_bg">#143320</color>
+    <color name="ok_stroke">#1E5E35</color>
+    <color name="danger_bg">#3C1615</color>
+    <color name="danger_box_bg">#3C1615</color>
+    <color name="nav_bg">#1C1C1EE6</color>
+</resources>

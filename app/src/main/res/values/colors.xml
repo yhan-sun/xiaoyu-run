@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小雨run · 浅色设计系统 (Apple HIG 浅色规范)
+  以 #F2F2F7 灰白画布配合纯白悬浮卡片，打造克制、现代、温润的层次感。
+-->
+<resources>
+    <!-- 画布与卡片 -->
+    <color name="bg">#F2F2F7</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_secondary">#E5E5EA</color>
+    <color name="surface_tertiary">#D1D1D6</color>
+    <color name="card_stroke">#E5E5EA</color>
+
+    <!-- 文本体系 -->
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#6C6C70</color>
+    <color name="text_tertiary">#8E8E93</color>
+
+    <!-- 品牌主色：Apple System Blue -->
+    <color name="accent">#007AFF</color>
+    <color name="on_accent">#FFFFFF</color>
+    <color name="accent_soft">#E8F2FF</color>
+    <color name="accent_stroke">#B3D7FF</color>
+
+    <!-- 状态语义色 -->
+    <color name="success">#34C759</color>
+    <color name="on_success">#FFFFFF</color>
+    <color name="success_soft">#EBF9EE</color>
+    <color name="success_stroke">#A3E8B5</color>
+
+    <color name="warning">#FF9500</color>
+    <color name="on_warning">#FFFFFF</color>
+    <color name="warning_soft">#FFF6E6</color>
+
+    <color name="danger">#FF3B30</color>
+    <color name="on_danger">#FFFFFF</color>
+    <color name="danger_soft">#FEECEB</color>
+    <color name="danger_stroke">#FFB5B0</color>
+
+    <!-- 底部悬浮栏 -->
+    <color name="nav_bar_bg">#F9F9FBE6</color>
+    <color name="nav_bar_stroke">#E5E5EA</color>
+
+    <!-- 运行日志与代码 -->
+    <color name="log_text">#1C1C1E</color>
+    <color name="log_bg">#F8F9FA</color>
+
+    <!-- 兼容旧映射 -->
+    <color name="fg">#000000</color>
+    <color name="fg_dim">#6C6C70</color>
+    <color name="box">#FFFFFF</color>
+    <color name="box_stroke">#E5E5EA</color>
+    <color name="log">#1C1C1E</color>
+    <color name="ok">#34C759</color>
+    <color name="ok_bg">#EBF9EE</color>
+    <color name="ok_stroke">#A3E8B5</color>
+    <color name="danger_bg">#FEECEB</color>
+    <color name="danger_box_bg">#FEECEB</color>
+    <color name="nav_bg">#F9F9FBE6</color>
+</resources>
