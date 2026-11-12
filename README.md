@@ -14,7 +14,7 @@
 |---|---|---|---|
 | **取码工具** | Windows | 只做一件事：读微信缓存 → 打印 OpenID + 终端二维码 | [xiaoyu-run.exe](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) |
 | **电脑端界面版** | Windows / macOS | 可视化取码 + 打卡参数预览 | [安装包](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) |
-| **手机端** | Android 7.0+ · arm64 | 扫码或输入 → 生成轨迹 → 打卡 | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-android) |
+| **手机端** | Android 7.0+ · arm64 | 扫码或输入 → 生成轨迹 → 打卡（React + Ant Design Mobile） | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-android) |
 
 **为什么必须分成两半**：微信把小程序数据放在手机的应用私有目录
 （`/data/data/com.tencent.mm`），未 root 的手机读不到 —— 这是 Android 沙箱，不是工具问题。
@@ -94,10 +94,13 @@ cd desktop/src-tauri && cargo test
 
 ```
 desktop/                    Tauri 2 应用（同时产出 Windows EXE 与 Android APK）
-├── index.html              页面骨架（侧栏 / 底部标签栏自适应）
+├── index.html              页面骨架
 ├── src/
-│   ├── main.ts             状态、IPC、Canvas 轨迹渲染
-│   └── styles.css          设计系统（深浅双主题、移动断点、安全区）
+│   ├── main.tsx            React 入口
+│   ├── App.tsx             外壳 + 四个页面（TabBar / NavBar / Card / Selector）
+│   ├── TrackCanvas.tsx     轨迹画布（Canvas + 进度缓动 + 脉冲）
+│   ├── api.ts              类型与 IPC 封装
+│   └── styles.css          主题令牌与布局（组件样式交给 antd-mobile）
 └── src-tauri/src/
     ├── lib.rs              Tauri 命令：配置 / 连接 / 预览 / 运行 / 成绩 / 提取
     ├── extract.rs          微信缓存提取 + 二维码生成

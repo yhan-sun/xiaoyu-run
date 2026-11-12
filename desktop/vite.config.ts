@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// Tauri 在固定端口起前端 dev server；clearScreen 关掉以免盖住 Rust 编译输出。
 export default defineConfig({
-  root: ".",
+  plugins: [react()],
   clearScreen: false,
   server: {
     port: 5273,
