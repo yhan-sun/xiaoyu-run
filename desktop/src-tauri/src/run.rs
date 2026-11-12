@@ -328,17 +328,16 @@ fn valid_flags(track: &[TrackPoint], area: &Area) -> Vec<bool> {
 
 /// 每 n 个点一批，并把上一批的末点作为下一批的首点。
 fn batch<T: Clone>(pts: &[T], n: usize) -> Vec<Vec<T>> {
+    assert!(n >= 2, "batch size must allow an overlapping point");
     let mut out = Vec::new();
-    let mut i = 0;
-    while i < pts.len() {
-        let end = (i + n).min(pts.len());
-        let mut chunk = Vec::with_capacity(end - i + 1);
-        if i > 0 {
-            chunk.push(pts[i - 1].clone());
+    let mut start = 0;
+    while start + 1 < pts.len() {
+        let end = (start + n).min(pts.len());
+        out.push(pts[start..end].to_vec());
+        if end == pts.len() {
+            break;
         }
-        chunk.extend_from_slice(&pts[i..end]);
-        out.push(chunk);
-        i = end;
+        start = end - 1;
     }
     out
 }
@@ -367,7 +366,7 @@ fn apply_settlement(state: &mut RunState, stopped: bool, result: Result<(), Stri
         Err(err) => {
             state.phase = "失败：结算未确认".into();
             state.failed = true;
-            format!("✗ 结算失败：{}；记录可能仍未结束", err)
+            format!("✗ 结算失败：{}；请在官方小程序检查并结束记录", err)
         }
     }
 }
@@ -761,6 +760,29 @@ pub fn run(
 #[cfg(test)]
 mod parse_tests {
     use super::*;
+
+    #[test]
+    fn batches_match_v2_limit_and_preserve_all_points() {
+        let points: Vec<_> = (0..690).collect();
+        let batches = batch(&points, 8);
+        assert_eq!(batches.len(), 99);
+        assert!(batches.iter().all(|b| (2..=8).contains(&b.len())));
+        assert!(batches.windows(2).all(|w| w[0].last() == w[1].first()));
+        let recovered: Vec<_> = batches.iter().enumerate()
+            .flat_map(|(i, b)| b.iter().skip(usize::from(i > 0)).copied())
+            .collect();
+        assert_eq!(recovered, points);
+    }
+
+    #[test]
+    fn batching_has_no_duplicate_only_tail() {
+        assert!(batch::<u8>(&[], 8).is_empty());
+        assert!(batch(&[0], 8).is_empty());
+        assert_eq!(batch(&(0..8).collect::<Vec<_>>(), 8).iter().map(Vec::len).collect::<Vec<_>>(), vec![8]);
+        assert_eq!(batch(&(0..9).collect::<Vec<_>>(), 8).iter().map(Vec::len).collect::<Vec<_>>(), vec![8, 2]);
+        assert_eq!(batch(&(0..15).collect::<Vec<_>>(), 8).iter().map(Vec::len).collect::<Vec<_>>(), vec![8, 8]);
+        assert_eq!(batch(&(0..16).collect::<Vec<_>>(), 8).iter().map(Vec::len).collect::<Vec<_>>(), vec![8, 8, 2]);
+    }
 
     #[test]
     fn settlement_reports_success_and_failure_truthfully() {

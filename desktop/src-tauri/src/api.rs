@@ -9,9 +9,15 @@ pub const BASE: &str = "https://sport.cqupt.edu.cn/new_wxapp";
 /// 与小程序 globalData.pointCount 一致
 pub const POINT_BATCH: usize = 8;
 
-fn http_error(code: u16, text: &str) -> String {
+fn http_error(code: u16, text: &str, request_id: Option<&str>) -> String {
     if code == 403 && text.to_ascii_lowercase().contains("waf") {
-        return "HTTP 403：请求被服务器安全防护拦截，服务端未确认操作".into();
+        let mut message = String::from("HTTP 403：请求被服务器安全防护拦截，服务端未确认操作");
+        if let Some(id) = request_id.filter(|id| {
+            !id.is_empty() && id.len() <= 80 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b"-_.:".contains(&b))
+        }) {
+            message.push_str(&format!("（请求标识：{}）", id));
+        }
+        return message;
     }
     let trimmed = text.trim_start();
     if trimmed.to_ascii_lowercase().starts_with("<!doctype html") || trimmed.to_ascii_lowercase().starts_with("<html") {
@@ -27,10 +33,47 @@ mod http_error_tests {
 
     #[test]
     fn summarizes_waf_html_without_claiming_success() {
-        let message = http_error(403, "<!DOCTYPE html><title>waf拦截</title>");
+        let message = http_error(403, "<!DOCTYPE html><title>waf拦截</title>", None);
         assert!(message.contains("403"));
         assert!(message.contains("拦截"));
         assert!(!message.contains("<!DOCTYPE"));
+    }
+
+    #[test]
+    fn waf_error_includes_only_safe_request_identifiers() {
+        let body = "<!DOCTYPE html><title>waf拦截</title>";
+        assert!(http_error(403, body, Some("req-123.abc")).contains("req-123.abc"));
+        assert!(!http_error(403, body, Some("bad\nheader")).contains("bad"));
+        assert!(!http_error(403, body, Some(&"x".repeat(81))).contains(&"x".repeat(81)));
+    }
+
+    #[test]
+    fn waf_response_preserves_safe_request_id_without_logging_token() {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+            let mut bytes = Vec::new();
+            let mut buffer = [0; 1024];
+            while !bytes.ends_with(b"\r\n\r\n") {
+                let n = stream.read(&mut buffer).unwrap();
+                assert!(n > 0);
+                bytes.extend_from_slice(&buffer[..n]);
+            }
+            let body = b"<!DOCTYPE html><title>waf blocked</title>";
+            let headers = format!("HTTP/1.1 403 Forbidden\r\nX-Request-Id: req-123\r\nContent-Length: {}\r\n\r\n", body.len());
+            stream.write_all(headers.as_bytes()).unwrap();
+            stream.write_all(body).unwrap();
+        });
+        let mut api = Api::new();
+        api.token = "test-secret-token".into();
+        assert!(api.call("POST", &format!("http://{address}/end"), None, true).is_none());
+        server.join().unwrap();
+        assert!(api.last_error.contains("req-123"));
+        assert!(!api.last_error.contains("test-secret-token"));
+        assert!(api.trace.iter().all(|entry| !entry.contains("test-secret-token")));
     }
 
     #[test]
@@ -205,8 +248,14 @@ impl Api {
                 })
             }
             Err(ureq::Error::Status(code, resp)) => {
+                // WAF request identifiers can help the service operator find the
+                // rejection; never log request headers, tokens or the full page.
+                let request_id = ["x-waf-request-id", "x-request-id", "x-correlation-id", "cf-ray"]
+                    .iter()
+                    .find_map(|name| resp.header(name))
+                    .map(str::to_owned);
                 let text = resp.into_string().unwrap_or_default();
-                self.last_error = http_error(code, &text);
+                self.last_error = http_error(code, &text, request_id.as_deref());
                 self.trace
                     .push(format!("{} {}  → {}", method, url, self.last_error));
                 None

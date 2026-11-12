@@ -149,13 +149,14 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.2-android
-          name: "小雨run v3.2.2 · Android"
+          tag_name: v3.2.3-android
+          name: "小雨run v3.2.3 · Android"
           body: |
-            小雨run v3.2.2（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.3（Rust + Tauri 重写）· Android arm64 版
 
             #### 本版更新
-            - 修复扫码运行时缺少识别类的问题；继续内置识别模型。
+            - 修正每批上传点数，和 2.0.2 一致：每批最多 8 点，批次间共享一个端点。
+            - 如果结算被服务器拦截，提示检查官方小程序；有请求标识时供排查。
             - 停止时请求结算，失败不再显示为成功；优化跑道形状。
             - 如果服务端返回 HTTP 403 拦截，结算仍未确认，请以官方小程序为准。
 
