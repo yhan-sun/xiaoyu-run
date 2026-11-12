@@ -92,16 +92,8 @@ jobs:
         working-directory: desktop
         run: npx tauri android init --ci --skip-targets-install
 
-      - name: Disable R8 minification
-        run: |
-          # Tauri 按类名反射注册原生插件（如 "BarcodeScannerPlugin"），
-          # R8 混淆会把类改名，反射拿不到 → 插件实例为 null → 空指针。
-          f=desktop/src-tauri/gen/android/app/build.gradle.kts
-          grep -n "isMinifyEnabled" "$f" || true
-          sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/g' "$f"
-          sed -i 's/isShrinkResources = true/isShrinkResources = false/g' "$f"
-          echo "--- 修改后 ---"
-          grep -n "isMinifyEnabled\|isShrinkResources" "$f" || true
+      - name: Configure Android scanner and release optimization
+        run: python3 desktop/scripts/configure-android.py
 
       - name: Build APK
         working-directory: desktop

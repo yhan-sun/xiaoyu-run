@@ -74,6 +74,35 @@ body {
   background: var(--adm-color-background);
 }
 
+/* 扫码插件将相机预览放在 WebView 下方。 */
+html.scanner-active, html.scanner-active body, html.scanner-active #root {
+  background: transparent !important;
+}
+.scanner-screen {
+  min-height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+.scanner-heading {
+  color: #fff;
+  background: rgba(0, 0, 0, .68);
+  border-radius: 20px;
+  padding: 10px 18px;
+}
+.scanner-frame {
+  width: min(70vw, 280px);
+  aspect-ratio: 1;
+  border: 2px solid white;
+  border-radius: 16px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, .3);
+}
+.scanner-screen .adm-button, .scanner-heading { position: relative; z-index: 1; }
+
 .navbar {
   flex: 0 0 auto;
   border-bottom: 1px solid var(--adm-color-border);

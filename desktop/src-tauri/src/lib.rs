@@ -752,9 +752,6 @@ pub fn run() {
     let builder = tauri::Builder::default();
 
     // 扫码插件只存在于移动端（crate 内部 #![cfg(mobile)]），桌面端不能注册。
-    // 这里用显式的 target_os，而不是 tauri-build 注入的自定义 cfg(mobile)：
-    // 后者一旦没生效，注册语句会被整段编译掉，运行时取到 null 插件实例，
-    // 表现就是 Java 层 "getClass() on a null object reference"。
     #[cfg(any(target_os = "android", target_os = "ios"))]
     let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
 

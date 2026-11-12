@@ -114,6 +114,10 @@ export default function App() {
   const [power, setPower] = useState<PowerStatus | null>(null);
   const [extract, setExtract] = useState<ExtractResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanReady, setScanReady] = useState(false);
+  const scanActive = useRef(false);
+  const scanCancelled = useRef(false);
   const [openidText, setOpenidText] = useState("");
   const [version, setVersion] = useState("3.1.0");
 
@@ -348,26 +352,26 @@ export default function App() {
   }, [config.openid]);
 
   const scanQr = useCallback(async () => {
+    if (scanActive.current) return;
+    scanActive.current = true;
+    scanCancelled.current = false;
     try {
       const mod = await import("@tauri-apps/plugin-barcode-scanner");
-
-      // 能查就查，查不到（旧版插件没实现）就直接去扫
-      try {
-        const perm = await mod.checkPermissions();
-        if (perm !== "granted") {
-          const asked = await mod.requestPermissions();
-          if (asked !== "granted") {
-            Toast.show({ icon: "fail", content: "没有相机权限，请在系统设置里允许" });
-            return;
-          }
-        }
-      } catch {
-        /* 忽略，交给 scan 自己处理 */
+      let permission = await mod.checkPermissions();
+      if (permission !== "granted") permission = await mod.requestPermissions();
+      if (permission !== "granted") {
+        Toast.show({ icon: "fail", content: "没有相机权限，请在系统设置里允许" });
+        return;
       }
 
-      const res = await mod.scan({ windowed: true, formats: [mod.Format.QRCode] });
-      const raw = typeof res === "string" ? res : (res as { content?: string })?.content ?? "";
-      const clean = sanitizeOpenid(raw);
+      // windowed 模式的相机画面位于 WebView 下方，先让页面透明。
+      document.documentElement.classList.add("scanner-active");
+      setScanning(true);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const result = mod.scan({ windowed: true, formats: [mod.Format.QRCode] });
+      setScanReady(true);
+      const res = await result;
+      const clean = sanitizeOpenid(res.content ?? "");
       if (!clean) {
         Toast.show({ content: "二维码里没有有效内容" });
         return;
@@ -376,7 +380,7 @@ export default function App() {
       update({ openid: clean });
       Toast.show({ icon: "success", content: "已扫码填入" });
     } catch (e) {
-      // 插件抛的是对象，直接 String() 会变成 [object Object]
+      if (scanCancelled.current) return;
       const msg =
         e instanceof Error
           ? e.message
@@ -385,9 +389,25 @@ export default function App() {
               (e as { error?: string }).error ??
               JSON.stringify(e)
             : String(e);
-      Toast.show({ icon: "fail", content: `扫码失败：${msg}` });
+      Toast.show({ icon: "fail", content: `扫码失败：${msg}，也可以粘贴 OpenID` });
+    } finally {
+      document.documentElement.classList.remove("scanner-active");
+      setScanning(false);
+      setScanReady(false);
+      scanActive.current = false;
     }
   }, [update]);
+
+  const cancelScan = useCallback(async () => {
+    try {
+      const mod = await import("@tauri-apps/plugin-barcode-scanner");
+      scanCancelled.current = true;
+      await mod.cancel();
+    } catch {
+      scanCancelled.current = false;
+      Toast.show({ icon: "fail", content: "退出扫码失败，请重试" });
+    }
+  }, []);
 
   const runExtract = useCallback(async () => {
     try {
@@ -913,6 +933,16 @@ export default function App() {
     settings: "设置",
     extract: "提取 OpenID",
   };
+
+  if (scanning) {
+    return (
+      <div className="scanner-screen">
+        <div className="scanner-heading">将二维码放入画面中</div>
+        <div className="scanner-frame" aria-hidden="true" />
+        <Button disabled={!scanReady} onClick={() => void cancelScan()}>取消扫码</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="shell">

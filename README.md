@@ -130,6 +130,17 @@ cd src-tauri && cargo test   # Rust 测试
 
 > Cargo 缓存不可写时：`CARGO_HOME=../.cargo-home cargo test`
 
+Android 构建需要先生成并配置 Tauri 工程（安装好 Android SDK/NDK 后）：
+
+```bash
+cd desktop
+npx tauri android init --ci
+python3 scripts/configure-android.py
+npx tauri android build --apk --target aarch64
+```
+
+配置脚本会关闭 release 优化并改用内置扫码模型；每次重新生成 Android 工程后都要运行。
+
 CI 三个工作流：`build-android.yml`（APK）、`build-windows.yml`（EXE）、
 `build-apk.yml`（v2 Kotlin，仅 `app/` 变动时触发）。
 
