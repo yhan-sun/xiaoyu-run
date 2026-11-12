@@ -343,6 +343,44 @@ fn batch<T: Clone>(pts: &[T], n: usize) -> Vec<Vec<T>> {
     out
 }
 
+fn end_record(api: &mut Api, record_no: &str) -> Result<(), String> {
+    match api.end_sport(record_no) {
+        Some(j) => {
+            let response = Resp::of(Some(&j));
+            if response.ok {
+                Ok(())
+            } else {
+                Err(format!("code={} {}", response.code, response.msg))
+            }
+        }
+        None => Err(format!("网络失败：{}", api.last_error)),
+    }
+}
+
+fn apply_settlement(state: &mut RunState, stopped: bool, result: Result<(), String>) -> String {
+    match result {
+        Ok(()) => {
+            state.phase = if stopped { "已停止并结算" } else { "已完成" }.into();
+            state.finished = true;
+            "✓ 结算完成".into()
+        }
+        Err(err) => {
+            state.phase = "失败：结算未确认".into();
+            state.failed = true;
+            format!("✗ 结算失败：{}；记录可能仍未结束", err)
+        }
+    }
+}
+
+fn finish_record(
+    state: &mut RunState,
+    stopped: bool,
+    end: impl FnOnce() -> Result<(), String>,
+    on_log: &dyn Fn(String),
+) {
+    on_log(apply_settlement(state, stopped, end()));
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     api: &mut Api,
@@ -357,8 +395,6 @@ pub fn run(
     on_state: &dyn Fn(RunState),
     on_log: &dyn Fn(String),
 ) {
-    cancel.store(false, Ordering::SeqCst);
-
     let mut state = RunState {
         phase: "初始化".into(),
         pace_sec_km,
@@ -477,22 +513,50 @@ pub fn run(
         return;
     }
     on_log(format!("✓ sportRecordNo = {}", record_no));
+    if cancel.load(Ordering::SeqCst) {
+        state.phase = "结算中".into();
+        on_state(state.clone());
+        finish_record(&mut state, true, || end_record(api, &record_no), on_log);
+        on_state(state);
+        return;
+    }
 
     // 服务端 start2 会接续上次没结束的记录，先清掉再开一条干净的
-    let pre_pts = api
-        .get_record_info(&record_no)
-        .map(|v| {
+    let pre_pts = match api.get_record_info(&record_no) {
+        Some(v) => {
             let r = Resp::of(Some(&v));
-            r.data
-                .get("points")
-                .and_then(|p| p.as_array())
-                .map(|a| a.len())
-                .unwrap_or(0)
-        })
-        .unwrap_or(0);
+            if !r.ok {
+                on_log(format!("✗ 无法检查现有记录：code={} {}", r.code, r.msg));
+                state.phase = "失败：无法检查已有记录".into();
+                state.failed = true;
+                on_state(state);
+                return;
+            }
+            r.data.get("points").and_then(|p| p.as_array()).map(|a| a.len()).unwrap_or(0)
+        }
+        None => {
+            on_log(format!("✗ 无法检查现有记录：{}", api.last_error));
+            state.phase = "失败：无法检查已有记录".into();
+            state.failed = true;
+            on_state(state);
+            return;
+        }
+    };
     if pre_pts > 0 {
         on_log(format!("⚠ 接续了上次未结束的记录（已有 {} 点），先结束再重开", pre_pts));
-        api.end_sport(&record_no);
+        if let Err(err) = end_record(api, &record_no) {
+            on_log(format!("✗ 上次记录结算失败：{}", err));
+            state.phase = "失败：上次记录未结算".into();
+            state.failed = true;
+            on_state(state);
+            return;
+        }
+        if cancel.load(Ordering::SeqCst) {
+            state.phase = "已停止并结算".into();
+            state.finished = true;
+            on_state(state);
+            return;
+        }
         if let Some(sj2) = api.start_sport(&area.place_name, &area.place_code) {
             let r2 = Resp::of(Some(&sj2));
             let no2 = match &r2.data {
@@ -503,8 +567,18 @@ pub fn run(
                 record_no = no2;
                 on_log(format!("✓ 新 sportRecordNo = {}", record_no));
             } else {
-                on_log("✗ 重新开一条失败，仍用原记录".into());
+                on_log("✗ 重新开始失败，未上传新轨迹".into());
+                state.phase = "失败：无法开始新记录".into();
+                state.failed = true;
+                on_state(state);
+                return;
             }
+        } else {
+            on_log(format!("✗ 重新开始失败：{}", api.last_error));
+            state.phase = "失败：无法开始新记录".into();
+            state.failed = true;
+            on_state(state);
+            return;
         }
     } else {
         on_log("记录干净，从 0 开始".into());
@@ -576,20 +650,17 @@ pub fn run(
 
     for (i, b) in batches.iter().enumerate() {
         if cancel.load(Ordering::SeqCst) {
-            on_log("已取消".into());
-            state.phase = "已取消".into();
-            state.failed = true;
-            on_state(state);
-            return;
+            on_log("已停止上传，准备结算已上传的记录".into());
+            break;
         }
 
-        match api.upload_points(&record_no, b) {
-            None => on_log(format!(
+        let upload_ok = match api.upload_points(&record_no, b) {
+            None => { on_log(format!(
                 "批次 {}/{} ✗ {}",
                 i + 1,
                 batches.len(),
                 api.last_error
-            )),
+            )); false },
             Some(j) => {
                 let ur = Resp::of(Some(&j));
                 if let Some(m) = ur.num("mileage") {
@@ -601,7 +672,16 @@ pub fn run(
                 if !ur.ok {
                     on_log(format!("批次 {}/{} ✗ code={} {}", i + 1, batches.len(), ur.code, ur.msg));
                 }
+                ur.ok
             }
+        };
+        if !upload_ok {
+            if cancel.load(Ordering::SeqCst) { break; }
+            on_log("上传失败，已停止；记录可能仍未结束".into());
+            state.phase = "失败：上传未确认".into();
+            state.failed = true;
+            on_state(state);
+            return;
         }
 
         uploaded += if i == 0 { b.len() } else { b.len().saturating_sub(1) };
@@ -661,37 +741,18 @@ pub fn run(
         on_state(state.clone());
     }
 
-    if cancel.load(Ordering::SeqCst) {
-        state.phase = "已取消".into();
-        state.failed = true;
-        on_state(state);
-        return;
-    }
-
     // ⑤ 结束
     on_log("结束记录 end …".into());
     state.phase = "结算中".into();
     on_state(state.clone());
 
-    match api.end_sport(&record_no) {
-        Some(j) => {
-            let er = Resp::of(Some(&j));
-            if er.ok {
-                on_log("✓ 结算完成".into());
-            } else {
-                on_log(format!("✗ 结算失败 code={} {}", er.code, er.msg));
-            }
-        }
-        None => on_log(format!("✗ 结算网络失败：{}", api.last_error)),
-    }
-
-    state.phase = "已完成".into();
-    state.finished = true;
+    let stopped = cancel.load(Ordering::SeqCst);
+    finish_record(&mut state, stopped, || end_record(api, &record_no), on_log);
     state.points_done = uploaded;
     state.meters_done = if server_mileage >= 0.0 {
         server_mileage * 1000.0
     } else {
-        target_m
+        if uploaded > 0 { cum[uploaded - 1] } else { 0.0 }
     };
     state.eta_sec = 0;
     on_state(state);
@@ -700,6 +761,24 @@ pub fn run(
 #[cfg(test)]
 mod parse_tests {
     use super::*;
+
+    #[test]
+    fn settlement_reports_success_and_failure_truthfully() {
+        let mut stopped = RunState::default();
+        let calls = std::cell::Cell::new(0);
+        finish_record(&mut stopped, true, || {
+            calls.set(calls.get() + 1);
+            Ok(())
+        }, &|_| {});
+        assert_eq!(calls.get(), 1);
+        assert!(stopped.finished && !stopped.failed);
+        assert_eq!(stopped.phase, "已停止并结算");
+
+        let mut failed = RunState::default();
+        apply_settlement(&mut failed, false, Err("network".into()));
+        assert!(failed.failed && !failed.finished);
+        assert_eq!(failed.phase, "失败：结算未确认");
+    }
 
     #[test]
     fn accepts_string_and_number_coordinates() {

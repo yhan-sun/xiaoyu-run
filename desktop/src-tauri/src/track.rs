@@ -257,6 +257,9 @@ fn dedupe(poly: &[(f64, f64)]) -> Poly {
 
 /// 选一圈基准环：先检查未加噪声的内缩环本身是否完全合法，不合适就往里缩一档。
 fn choose_ring(ctx: &Fence, seed: i64) -> Poly {
+    if let Some(ring) = choose_stadium(ctx) {
+        return organic(&ring, RING_WOBBLE_M, seed, ctx);
+    }
     let mut fallback: Poly = Vec::new();
     let mut fallback_bad = usize::MAX;
 
@@ -272,6 +275,62 @@ fn choose_ring(ctx: &Fence, seed: i64) -> Poly {
         }
     }
     organic(&fallback, RING_WOBBLE_M, seed, ctx)
+}
+
+/// Fit an oriented stadium to the fence and use it only when its entire
+/// perimeter avoids both the fence boundary and excluded areas.
+fn choose_stadium(ctx: &Fence) -> Option<Poly> {
+    let (lat0, lon0) = geo::centroid(ctx.fence);
+    let lon_scale = lat0.to_radians().cos().abs().max(0.01);
+    let xy: Vec<(f64, f64)> = ctx.fence.iter()
+        .map(|&(lat, lon)| ((lon - lon0) * lon_scale, lat - lat0))
+        .collect();
+    let bounds = |angle: f64| {
+        let (s, c) = angle.sin_cos();
+        xy.iter().fold((f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY), |b, &(x, y)| {
+            let (u, v) = (x * c + y * s, -x * s + y * c);
+            (b.0.min(u), b.1.max(u), b.2.min(v), b.3.max(v))
+        })
+    };
+    let mut best_angle = 0.0;
+    let mut best_area = f64::INFINITY;
+    for i in 0..xy.len() {
+        let (a, b) = (xy[i], xy[(i + 1) % xy.len()]);
+        let angle = (b.1 - a.1).atan2(b.0 - a.0);
+        let bb = bounds(angle);
+        let area = (bb.1 - bb.0) * (bb.3 - bb.2);
+        if area < best_area && area > 0.0 {
+            best_area = area;
+            best_angle = angle;
+        }
+    }
+    if !best_area.is_finite() { return None; }
+    let mut bb = bounds(best_angle);
+    if bb.1 - bb.0 < bb.3 - bb.2 {
+        best_angle += std::f64::consts::FRAC_PI_2;
+        bb = bounds(best_angle);
+    }
+    let (center_u, center_v) = ((bb.0 + bb.1) / 2.0, (bb.2 + bb.3) / 2.0);
+    let (s, c) = best_angle.sin_cos();
+    for factor in RING_INSETS {
+        let radius = (bb.3 - bb.2) * factor / 2.0;
+        let straight = ((bb.1 - bb.0) * factor / 2.0 - radius).max(0.0);
+        if radius <= 0.0 { continue; }
+        let mut ring = Vec::with_capacity(50);
+        for side in 0..2 {
+            for i in 0..=24 {
+                let angle = -std::f64::consts::FRAC_PI_2
+                    + side as f64 * std::f64::consts::PI
+                    + i as f64 * std::f64::consts::PI / 24.0;
+                let u = center_u + if side == 0 { straight } else { -straight } + radius * angle.cos();
+                let v = center_v + radius * angle.sin();
+                let (x, y) = (u * c - v * s, u * s + v * c);
+                ring.push((lat0 + y, lon0 + x / lon_scale));
+            }
+        }
+        if bad_points(&ring, ctx) == 0 { return Some(ring); }
+    }
+    None
 }
 
 /// 多边形边界（按 7m 加密）有多少点掉出围栏或压进禁跑区。
@@ -858,6 +917,12 @@ fn generate_for_count_smooth(
     noise: f64,
     seed: i64,
 ) -> Vec<TrackPoint> {
+    if let Some(ring) = choose_stadium(ctx) {
+        let pts = build_smooth(&ring, n, weights, target_m, noise, seed, ctx.fence);
+        if pts.iter().all(|p| ctx.valid(p.lat, p.lon)) {
+            return pts;
+        }
+    }
     let mut best: Vec<TrackPoint> = Vec::new();
     let mut best_score = -1.0;
 
@@ -1034,6 +1099,37 @@ mod tests {
                 p.lon
             );
         }
+    }
+
+    #[test]
+    fn rectangular_fence_gets_a_stadium_ring() {
+        let fence = rect_fence();
+        let ctx = Fence { fence: &fence, excludes: &[] };
+        let ring = choose_stadium(&ctx).expect("矩形围栏应能容纳跑道");
+        assert_eq!(ring.len(), 50);
+        assert_eq!(bad_points(&ring, &ctx), 0);
+        // The two straight sections join the endpoints of equal semicircles.
+        let straight_a = geo::hav(ring[24].0, ring[24].1, ring[25].0, ring[25].1);
+        let straight_b = geo::hav(ring[49].0, ring[49].1, ring[0].0, ring[0].1);
+        assert!(straight_a > 5.0 && (straight_a - straight_b).abs() < 0.2);
+        let arc_step = geo::hav(ring[0].0, ring[0].1, ring[1].0, ring[1].1);
+        assert!(arc_step > 1.0 && straight_a > arc_step);
+    }
+
+    #[test]
+    fn stadium_respects_rotated_fence_and_excluded_area() {
+        let (lat, lon) = (29.533_f64, 106.605_f64);
+        let scale = lat.to_radians().cos();
+        let (s, c) = 0.5_f64.sin_cos();
+        let map = |x: f64, y: f64| (lat + x * s + y * c, lon + (x * c - y * s) / scale);
+        let fence = vec![map(-0.0008, -0.0004), map(0.0008, -0.0004), map(0.0008, 0.0004), map(-0.0008, 0.0004)];
+        let ban = vec![map(-0.0001, -0.0001), map(0.0001, -0.0001), map(0.0001, 0.0001), map(-0.0001, 0.0001)];
+        let bans = vec![ban];
+        let ctx = Fence { fence: &fence, excludes: &bans };
+        let ring = choose_stadium(&ctx).expect("旋转围栏应能容纳跑道");
+        assert_eq!(bad_points(&ring, &ctx), 0);
+        let straight = geo::hav(ring[24].0, ring[24].1, ring[25].0, ring[25].1);
+        assert!(straight > 30.0);
     }
 
     #[test]

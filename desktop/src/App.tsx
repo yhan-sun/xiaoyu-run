@@ -285,8 +285,8 @@ export default function App() {
     void (async () => {
       const unState = await on<RunState>("run-state", (e) => {
         setRun(e.payload);
-        if (e.payload.finished) Toast.show({ icon: "success", content: "打卡完成" });
-        if (e.payload.failed) Toast.show({ icon: "fail", content: "已中断" });
+        if (e.payload.finished) Toast.show({ icon: "success", content: e.payload.phase });
+        if (e.payload.failed) Toast.show({ icon: "fail", content: e.payload.phase });
       });
       const unLog = await on<string>("run-log", (e) => pushLog(e.payload));
       dispose = () => {
