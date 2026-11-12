@@ -75,6 +75,8 @@ OpenID 是校园跑系统的身份标识凭证，换取 Token 仅需此 ID。
    ```
 3. 复制终端输出的 OpenID。
 
+macOS 微信 4.x 会自动检查 `~/Library/Containers/com.tencent.xinWeChat2/Data/Documents/app_data`。如果微信数据位于其他目录，可以运行 `python3 tools/get_openid.py <微信数据目录>`，或添加 `--verbose` 查看检查到的缓存目录。若仍未找到，请在电脑微信中打开小程序并完成登录后重试；缓存被清理或微信版本的缓存格式发生变化也可能导致无法提取。
+
 ### 步骤 2：在 App 中配置并开启
 1. 打开 **小雨run**，前往「指南」页粘贴 OpenID 并点击 **「同步场地与规则」**。
 2. 切回「运动」页，点击顶部的能效横幅，将应用加入 **后台省电白名单**。

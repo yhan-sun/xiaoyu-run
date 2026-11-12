@@ -14,6 +14,7 @@ openid 是你在「重邮智慧体育」小程序里的身份编号。
 
   Linux:   ~/.xwechat/radium/web/profiles/webview_<hash>/Cache/Cache_Data/
   Windows: %APPDATA%\\Tencent\\xwechat\\radium\\web\\profiles\\webview_<hash>\\Cache\\Cache_Data\\
+  macOS:   ~/Library/Containers/com.tencent.xinWeChat2/Data/Documents/app_data/radium/web/profiles/
 
 里面就有 openid。不用解密、不用抓包、不联网。
 
@@ -35,8 +36,8 @@ Linux 版微信允许把「数据目录」改到任意位置。改过之后 ~/.x
 4. 将提取到的 openid 填入打卡脚本或 App 即可
 
 可选参数：
-  python3 get_openid.py <目录>   只查指定目录（不触发自动扫描）
-  python3 get_openid.py --all    强制执行自动扫描
+  python3 get_openid.py <目录>   只查指定目录及其子目录
+  python3 get_openid.py --all    额外扫描家目录
   python3 get_openid.py --verbose  打印出每个被检查的缓存目录
 """
 
@@ -49,11 +50,7 @@ def get_default_wechat_roots():
     """获取不同系统下微信可能的数据根目录（支持 Linux / Windows / macOS / Wine）"""
     candidates = []
 
-    # 1. 允许命令行传入指定路径
-    if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
-        candidates.append(os.path.abspath(sys.argv[1]))
-
-    # 2. Windows 平台路径
+    # Windows 平台路径
     if os.name == "nt":
         appdata = os.environ.get("APPDATA", "")
         if appdata:
@@ -86,7 +83,12 @@ def get_default_wechat_roots():
             os.path.join(wine_prefix, "drive_c", "users", username, "AppData", "Roaming", "Tencent", "WeChat"),
         ])
 
-    # 4. macOS 平台路径
+    # macOS 微信 4.x 将 radium 存在沙盒的 Documents/app_data 中。
+    # 不同版本的容器名不同；保留旧版路径以兼容历史安装。
+    candidates.extend([
+        os.path.join(home, "Library", "Containers", container, "Data", "Documents", "app_data")
+        for container in ("com.tencent.xinWeChat2", "com.tencent.xinWeChat")
+    ])
     candidates.extend([
         os.path.join(home, "Library", "Containers", "com.tencent.xinWeChat", "Data", "Library", "Application Support", "com.tencent.xinWeChat"),
         os.path.join(home, "Library", "Application Support", "com.tencent.xinWeChat"),
@@ -106,6 +108,8 @@ def get_default_wechat_roots():
         if os.name == "nt":
             appdata = os.environ.get("APPDATA", r"C:\Users\Username\AppData\Roaming")
             return [os.path.join(appdata, "Tencent", "xwechat")]
+        elif sys.platform == "darwin":
+            return [os.path.join(home, "Library", "Containers", "com.tencent.xinWeChat2", "Data", "Documents", "app_data")]
         else:
             return [os.path.join(home, ".xwechat")]
 
@@ -407,21 +411,28 @@ def scan(dirs=None):
 
 def main():
     print("=" * 60)
-    print("      重邮智慧体育 · openid 提取器 (Linux / Windows)")
+    print("      重邮智慧体育 · openid 提取器 (Linux / Windows / macOS)")
     print("=" * 60)
     print()
 
-    active_roots = [r for r in WECHAT_ROOTS if os.path.isdir(r)]
+    args = sys.argv[1:]
+    paths = [arg for arg in args if not arg.startswith("-")]
+    unknown = [arg for arg in args if arg.startswith("-") and arg not in ("--all", "--verbose")]
+    if unknown or len(paths) > 1:
+        print("[X] 参数错误。用法：python3 get_openid.py [目录] [--all] [--verbose]")
+        return 2
+    if paths and not os.path.isdir(os.path.expanduser(paths[0])):
+        print("[X] 指定的目录不存在或无法访问：%s" % paths[0])
+        return 2
+    active_roots = ([os.path.abspath(os.path.expanduser(paths[0]))] if paths else
+                    [r for r in WECHAT_ROOTS if os.path.isdir(r)])
 
-    # 已知路径 + 自动发现合并。微信 Linux 版允许把数据目录重定向到任意位置，
-    # 只靠硬编码清单会漏，所以总要兜底扫一次。
+    # 先查已知布局；没有结果时再从搜索起点发现其他布局。
     caches = cache_dirs(active_roots)
 
-    search_roots = [os.path.expanduser("~")]
-    # 允许命令行显式指定搜索起点（放在搜索前，避免全盘走一遍）
-    for arg in sys.argv[1:]:
-        if not arg.startswith("-") and os.path.isdir(arg):
-            search_roots.insert(0, os.path.abspath(arg))
+    search_roots = active_roots[:] if paths else [os.path.expanduser("~")]
+    if paths and "--all" in args:
+        search_roots.append(os.path.expanduser("~"))
 
     # 关键：已知路径下没扫到结果时也要自动发现。
     # 微信 Linux 版允许把数据目录重定向到任意位置，此时 ~/.xwechat
@@ -449,7 +460,7 @@ def main():
             print()
             print("    请确保已安装电脑版微信并登录。")
             print("    也可以直接指定微信数据目录，例如：")
-            print("      python3 get_openid.py ~/.xwechat")
+            print("      python3 get_openid.py <微信数据目录>")
             return 2
         print("[X] 没找到小程序缓存目录。")
         print("    请在电脑微信里打开一次「重邮智慧体育」小程序，再重试。")
@@ -464,12 +475,14 @@ def main():
     hits = scan(caches)
     if not hits:
         print("[X] 缓存里没有找到 openid。")
-        print("    说明尚未在电脑微信中打开并登录过该小程序。")
-        print("    请在电脑微信里打开一次「重邮智慧体育」并完成登录，然后重试。")
+        print("    请在电脑微信里打开「重邮智慧体育」并完成登录，然后重试。")
+        print("    如果仍未找到，可能是微信版本的缓存格式不同或缓存已被清理。")
         return 4
 
     is_cqupt = any(h.get("is_cqupt") for h in hits)
     label = "重邮智慧体育身份" if is_cqupt else "检测到的身份"
+    if not is_cqupt:
+        print("[!] 未找到重邮智慧体育标识；以下 openid 可能属于其他小程序，请核实后使用。")
     print("找到 %d 个%s：" % (len(hits), label))
     print()
     for i, h in enumerate(hits, 1):
