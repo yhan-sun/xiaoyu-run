@@ -9,6 +9,31 @@ pub const BASE: &str = "https://sport.cqupt.edu.cn/new_wxapp";
 /// 与小程序 globalData.pointCount 一致
 pub const POINT_BATCH: usize = 8;
 
+fn http_error(code: u16, text: &str) -> String {
+    if code == 403 && text.to_ascii_lowercase().contains("waf") {
+        return "HTTP 403：请求被服务器安全防护拦截，服务端未确认操作".into();
+    }
+    let trimmed = text.trim_start();
+    if trimmed.to_ascii_lowercase().starts_with("<!doctype html") || trimmed.to_ascii_lowercase().starts_with("<html") {
+        format!("HTTP {}：服务器返回了网页错误响应", code)
+    } else {
+        format!("HTTP {}: {}", code, truncate(text))
+    }
+}
+
+#[cfg(test)]
+mod http_error_tests {
+    use super::http_error;
+
+    #[test]
+    fn summarizes_waf_html_without_claiming_success() {
+        let message = http_error(403, "<!DOCTYPE html><title>waf拦截</title>");
+        assert!(message.contains("403"));
+        assert!(message.contains("拦截"));
+        assert!(!message.contains("<!DOCTYPE"));
+    }
+}
+
 fn enc(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
@@ -155,7 +180,7 @@ impl Api {
             }
             Err(ureq::Error::Status(code, resp)) => {
                 let text = resp.into_string().unwrap_or_default();
-                self.last_error = format!("HTTP {}: {}", code, truncate(&text));
+                self.last_error = http_error(code, &text);
                 self.trace
                     .push(format!("{} {}  → {}", method, url, self.last_error));
                 None

@@ -1133,6 +1133,31 @@ mod tests {
     }
 
     #[test]
+    fn stadium_fits_taiji_fixture() {
+        // Coordinates already used in the Android track tests.
+        let fence = vec![
+            (29.533933, 106.608884), (29.531893, 106.608970),
+            (29.532019, 106.610646), (29.533979, 106.610558),
+        ];
+        let bans = vec![vec![
+            (29.533214, 106.609447), (29.533071, 106.609473),
+            (29.532917, 106.609468), (29.532626, 106.609486),
+            (29.532506, 106.609612), (29.532533, 106.610029),
+            (29.532691, 106.610093), (29.533146, 106.610060),
+            (29.533421, 106.610058), (29.533549, 106.609690),
+            (29.533457, 106.609455),
+        ]];
+        let ctx = Fence { fence: &fence, excludes: &bans };
+        let ring = choose_stadium(&ctx).expect("太极运动场应能容纳跑道");
+        assert_eq!(bad_points(&ring, &ctx), 0);
+        for burrs in [false, true] {
+            let track = generate(&fence, &bans, 345.0, 2000.0, 0.6, 42, 20.0, burrs).unwrap();
+            assert!(track.in_window());
+            assert!(track.points.iter().all(|p| ctx.valid(p.lat, p.lon)));
+        }
+    }
+
+    #[test]
     fn pace_window_is_clamped() {
         let (lo, hi) = pace_window(345.0, 20.0);
         assert!((lo - 325.0).abs() < 1e-9);

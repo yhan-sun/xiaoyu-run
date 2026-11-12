@@ -353,7 +353,7 @@ fn end_record(api: &mut Api, record_no: &str) -> Result<(), String> {
                 Err(format!("code={} {}", response.code, response.msg))
             }
         }
-        None => Err(format!("网络失败：{}", api.last_error)),
+        None => Err(format!("请求失败：{}", api.last_error)),
     }
 }
 
