@@ -522,3 +522,51 @@ body {
 .btn-stack .adm-button-fill-outline {
   background: transparent;
 }
+
+/* ============================================================================
+   视觉层次：减边框、加留白、强化排版尺度
+   ========================================================================= */
+
+/* 卡片之间留出呼吸感 */
+.page-inner > div > div > * + * {
+  margin-top: 12px;
+}
+
+.adm-card {
+  border-color: var(--adm-color-border);
+}
+
+/* 浅色下用极轻的阴影托起卡片，纯靠边框会显得像线框图 */
+html[data-prefers-color-scheme="light"] .adm-card,
+html[data-prefers-color-scheme="light"] .card-like,
+html[data-prefers-color-scheme="light"] .group {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+/* 区块标题更明确 */
+.section-title {
+  font-size: 11.5px;
+  margin: 24px 0 10px 2px;
+}
+
+/* 主数字与副信息之间留出层次 */
+.hero-sub {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+/* 指标格子给足高度，避免挤成一行小字 */
+.metric {
+  padding: 2px 0;
+}
+
+/* 让顶部标题栏更有存在感 */
+.navbar {
+  --height: 50px;
+}
+
+.navbar .adm-nav-bar-title {
+  font-size: 18px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
