@@ -1,4 +1,6 @@
-//! 从本机微信缓存提取 openid（Rust 实现，取代原先的 Python 脚本）。
+//! 从小程序缓存提取 openid（Rust 实现，取代原先的 Python 脚本）。
+//!
+//! 同时被电脑端 GUI（desktop/）和独立取码工具（extractor/）使用。
 //!
 //! 原理：微信 4.x 把小程序跑在 Chromium 容器里，`/wxUnifyId/checkBinding`
 //! 的响应是明文 JSON，直接落在磁盘缓存里。不用解密、不用抓包、不联网。
@@ -383,5 +385,45 @@ mod tests {
         assert!(svg.starts_with("<svg"));
         assert!(svg.ends_with("</svg>"));
         assert!(svg.contains("<path d=\"M"));
+    }
+}
+
+/// 终端里可直接扫的二维码（用全角块拼）。
+///
+/// 每个模块两个字符宽，四周留 2 模块静区 —— 命令行窗口里也能被手机扫到。
+pub fn qr_terminal(data: &str) -> Option<String> {
+    let code = qrcode::QrCode::new(data.as_bytes()).ok()?;
+    let w = code.width();
+    let colors = code.to_colors();
+    let border = 2usize;
+    let total = w + border * 2;
+
+    let mut out = String::new();
+    for y in 0..total {
+        for x in 0..total {
+            let dark = y >= border
+                && y < border + w
+                && x >= border
+                && x < border + w
+                && colors[(y - border) * w + (x - border)] == qrcode::Color::Dark;
+            out.push_str(if dark { "██" } else { "  " });
+        }
+        out.push('\n');
+    }
+    Some(out)
+}
+
+#[cfg(test)]
+mod qr_tests {
+    use super::*;
+
+    #[test]
+    fn terminal_qr_has_expected_width() {
+        let s = qr_terminal("oABC123456789012345678901234").unwrap();
+        let lines: Vec<&str> = s.lines().collect();
+        assert!(lines.len() > 20);
+        // 每行宽度一致（全角块，按字符数算）
+        let n = lines[0].chars().count();
+        assert!(lines.iter().all(|l| l.chars().count() == n));
     }
 }

@@ -21,6 +21,7 @@ ureq = { version = "2.10", features = ["tls", "gzip"] }
 chrono = "0.4"
 qrcode = { version = "0.14", default-features = false }
 tauri-plugin-barcode-scanner = "2"
+wxopenid = { path = "../../crates/wxopenid" }
 
 [profile.release]
 codegen-units = 1

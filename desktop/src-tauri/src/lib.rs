@@ -3,7 +3,6 @@
 //! 前端只负责呈现，所有网络与轨迹计算都在 Rust 侧完成。
 
 mod api;
-mod extract;
 mod geo;
 mod rng;
 mod run;
@@ -689,7 +688,7 @@ fn take_imported_openid() -> Option<String> {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ExtractResult {
-    found: Vec<extract::FoundOpenid>,
+    found: Vec<wxopenid::FoundOpenid>,
     note: String,
     scanned_dirs: usize,
     scanned_files: usize,
@@ -700,13 +699,13 @@ struct ExtractResult {
 /// 扫描本机微信缓存，提取 openid，并给出该 openid 的二维码。
 #[tauri::command]
 fn extract_openid() -> ExtractResult {
-    let out = extract::extract();
+    let out = wxopenid::extract();
     let qr = out
         .found
         .iter()
         .find(|f| f.cqupt)
         .or_else(|| out.found.first())
-        .and_then(|f| extract::qr_svg(&f.openid, 300));
+        .and_then(|f| wxopenid::qr_svg(&f.openid, 300));
     ExtractResult {
         found: out.found,
         note: out.note,
@@ -720,7 +719,7 @@ fn extract_openid() -> ExtractResult {
 /// 为任意文本生成二维码（手机扫码导入用）。
 #[tauri::command]
 fn make_qr(text: String, size: u32) -> Option<String> {
-    extract::qr_svg(&text, size.clamp(120, 1024))
+    wxopenid::qr_svg(&text, size.clamp(120, 1024))
 }
 
 

@@ -1,0 +1,19 @@
+[package]
+name = "xiaoyu-run"
+version = "3.0.0"
+edition = "2021"
+description = "小雨run 独立取码工具：只做一件事 —— 提取 openid 并给出二维码"
+
+[[bin]]
+name = "xiaoyu-run"
+path = "src/main.rs"
+
+[dependencies]
+wxopenid = { path = "../crates/wxopenid" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

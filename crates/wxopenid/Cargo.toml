@@ -1,0 +1,9 @@
+[package]
+name = "wxopenid"
+version = "3.0.0"
+edition = "2021"
+description = "从小程序缓存提取 openid，并生成二维码"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+qrcode = { version = "0.14", default-features = false }

@@ -12,7 +12,8 @@
 
 | 部件 | 平台 | 干什么 | 下载 |
 |---|---|---|---|
-| **电脑端** | Windows / macOS | 读本机微信缓存 → 提取 OpenID → 显示二维码 | [Windows EXE](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) |
+| **取码工具** | Windows | 只做一件事：读微信缓存 → 打印 OpenID + 终端二维码 | [xiaoyu-run.exe](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) |
+| **电脑端界面版** | Windows / macOS | 可视化取码 + 打卡参数预览 | [安装包](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) |
 | **手机端** | Android 7.0+ · arm64 | 扫码或输入 → 生成轨迹 → 打卡 | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-android) |
 
 **为什么必须分成两半**：微信把小程序数据放在手机的应用私有目录
@@ -25,9 +26,15 @@
 
 ### 1. 电脑端取码（只做一次）
 
-1. 打开 [Windows EXE](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.0.0-win) 安装运行
-2. 电脑微信里打开一次「重邮智慧体育」小程序并完成绑定
-3. 点「扫描本机微信」→ 得到 OpenID 与二维码
+**方式 A：独立小工具（推荐，345 KB，无界面）**
+
+双击 `xiaoyu-run.exe`，它直接打印 OpenID 和二维码，自动复制到剪贴板，按回车退出。
+
+**方式 B：界面版**
+
+打开安装包，点「扫描本机微信」，左侧出二维码、右侧出明文。
+
+两种方式都要求：电脑微信里打开过一次「重邮智慧体育」小程序并完成绑定。
 
 > **macOS 提示无权限**：系统设置 → 隐私与安全性 → **完全磁盘访问权限**，
 > 勾选小雨run，再回来重新扫描。读别的应用的沙箱容器必须给这个权限。

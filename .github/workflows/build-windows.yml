@@ -48,6 +48,10 @@ jobs:
         working-directory: desktop/src-tauri
         run: cargo test --quiet
 
+      - name: Build standalone extractor (xiaoyu-run.exe)
+        working-directory: extractor
+        run: cargo build --release
+
       - name: Build EXE / installer
         working-directory: desktop
         run: npx tauri build
@@ -56,7 +60,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path out | Out-Null
-          Copy-Item "desktop/src-tauri/target/release/*.exe" out/ -ErrorAction SilentlyContinue
+          # 只收独立取码工具，避免与 Tauri 的同名裸 exe 混淆
+          Copy-Item "extractor/target/release/xiaoyu-run.exe" out/ -ErrorAction SilentlyContinue
           Copy-Item "desktop/src-tauri/target/release/bundle/nsis/*.exe" out/ -ErrorAction SilentlyContinue
           Copy-Item "desktop/src-tauri/target/release/bundle/msi/*.msi" out/ -ErrorAction SilentlyContinue
           Get-ChildItem out | Format-Table Name, Length
@@ -77,8 +82,10 @@ jobs:
           body: |
             小雨run 电脑端 · Windows
 
-            用 Rust 重写的 openid 提取器：读取本机微信缓存，直接给出 OpenID 与二维码，
-            手机扫码或手动输入即可完成配置。
+            **xiaoyu-run.exe** —— 独立取码工具，只做一件事：读本机微信缓存，
+            打印 OpenID 与可直接扫的二维码。双击运行，按回车退出。
+
+            `XiaoYuRun_*_x64-setup.exe` / `.msi` 是完整界面版（含打卡、成绩等）。
 
             #### 使用
             1. 安装后打开（若提示无权限：系统设置 → 隐私 → 完全磁盘访问，勾选小雨run）
