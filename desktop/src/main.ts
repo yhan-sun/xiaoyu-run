@@ -1118,6 +1118,18 @@ async function init() {
 
   applyTheme(state.config.theme ?? "system");
 
+  // 电脑通过 adb push 推来的 openid：读取后立即填充并删除源文件
+  const imported = await call<string | null>("take_imported_openid");
+  if (imported) {
+    const clean = sanitizeOpenid(imported);
+    el.inOpenid.value = clean;
+    el.openidHint.textContent = "已从电脑导入";
+    el.openidHint.style.color = "var(--success)";
+    if (state.config) state.config.openid = clean;
+    persist();
+    toast("已从电脑导入 OpenID", "ok");
+  }
+
   renderPlaceOptions();
   ensureAnim();
   refreshPower();

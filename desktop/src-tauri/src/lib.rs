@@ -660,6 +660,30 @@ fn ui_probe(info: serde_json::Value) -> bool {
     std::fs::write(path, body).is_ok()
 }
 
+
+/// 从手机外部私有目录读取电脑推进来的 openid。
+///
+/// 微信把小程序数据存放在应用私有目录，未 root 无法读取；
+/// 所以手机端无法自行提取。这里提供一条**零手工**的传递通道：
+/// 电脑上提取后 `adb push` 一个文件，App 启动时读取并删除。
+#[tauri::command]
+fn take_imported_openid() -> Option<String> {
+    const FILES: [&str; 2] = [
+        "/storage/emulated/0/Android/data/com.xiaoyu.run/files/import_openid.txt",
+        "/sdcard/Android/data/com.xiaoyu.run/files/import_openid.txt",
+    ];
+    for p in FILES {
+        if let Ok(raw) = std::fs::read_to_string(p) {
+            let _ = std::fs::remove_file(p);
+            let v = raw.trim().to_string();
+            if !v.is_empty() {
+                return Some(v);
+            }
+        }
+    }
+    None
+}
+
 #[tauri::command]
 fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
@@ -681,6 +705,7 @@ pub fn run() {
             cancel_run,
             get_stats,
             power_status,
+            take_imported_openid,
             ui_probe,
             app_version
         ])
