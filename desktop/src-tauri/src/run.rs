@@ -225,6 +225,9 @@ pub fn fetch_areas(api: &mut Api) -> (Vec<Area>, Vec<String>) {
         ));
     }
 
+    let fence_count = fences.len();
+    let ban_count = bans.len();
+
     let out: Vec<Area> = fences
         .into_iter()
         .map(|(code, name, fence)| {
@@ -247,11 +250,11 @@ pub fn fetch_areas(api: &mut Api) -> (Vec<Area>, Vec<String>) {
     logs.push(format!(
         "解析：区域记录 {} 条 → 围栏 {} 个 / 禁跑区 {} 块 → 可用场地 {} 个",
         arr.len(),
-        fences.len(),
-        bans.len(),
+        fence_count,
+        ban_count,
         out.len()
     ));
-    if out.is_empty() && !arr.is_empty() && fences.is_empty() {
+    if out.is_empty() && !arr.is_empty() && fence_count == 0 {
         logs.push("没有 dzwl 类型的围栏记录，可能是该账号本学期场地未开放".into());
     }
     (out, logs)
