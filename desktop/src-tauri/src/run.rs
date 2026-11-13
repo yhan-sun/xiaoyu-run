@@ -525,7 +525,17 @@ pub fn run(
     }
 
     // 服务端 start2 会接续上次没结束的记录，先清掉再开一条干净的
-    let pre_pts = match api.get_record_info(&record_no) {
+    let record_info = api.get_record_info(&record_no);
+    // A stop can arrive while the info request is in flight. The record is
+    // already known, so try to settle it even if that read failed.
+    if cancel.load(Ordering::SeqCst) {
+        state.phase = "结算中".into();
+        on_state(state.clone());
+        finish_record(&mut state, true, || end_record(api, &record_no), on_log);
+        on_state(state);
+        return;
+    }
+    let pre_pts = match record_info {
         Some(v) => {
             let r = Resp::of(Some(&v));
             if !r.ok {
@@ -764,6 +774,113 @@ pub fn run(
 #[cfg(test)]
 mod parse_tests {
     use super::*;
+
+    #[test]
+    fn local_settlement_flow_handles_success_403_and_stop_during_failed_info() {
+        use std::io::{Read, Write};
+        use std::sync::Arc;
+
+        for scenario in ["success", "waf", "stop_during_info", "stop_during_upload"] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let address = listener.local_addr().unwrap();
+            let cancel = Arc::new(AtomicBool::new(false));
+            let server_cancel = cancel.clone();
+            let server = std::thread::spawn(move || {
+                let mut requests = Vec::new();
+                let deadline = Instant::now() + Duration::from_secs(15);
+                loop {
+                    let (mut stream, _) = match listener.accept() {
+                        Ok(connection) => connection,
+                        Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(Instant::now() < deadline, "mock server timed out: {scenario}");
+                            std::thread::sleep(Duration::from_millis(10));
+                            continue;
+                        }
+                        Err(err) => panic!("mock accept: {err}"),
+                    };
+                    stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+                    let mut bytes = Vec::new();
+                    let mut buffer = [0; 4096];
+                    let header_end = loop {
+                        let n = stream.read(&mut buffer).unwrap();
+                        assert!(n > 0);
+                        bytes.extend_from_slice(&buffer[..n]);
+                        if let Some(pos) = bytes.windows(4).position(|b| b == b"\r\n\r\n") {
+                            break pos + 4;
+                        }
+                    };
+                    let headers = String::from_utf8(bytes[..header_end].to_vec()).unwrap();
+                    let content_length = headers.lines().find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        if name.eq_ignore_ascii_case("content-length") { value.trim().parse::<usize>().ok() } else { None }
+                    });
+                    let length = content_length.unwrap_or(0);
+                    while bytes.len() - header_end < length {
+                        let n = stream.read(&mut buffer).unwrap();
+                        assert!(n > 0);
+                        bytes.extend_from_slice(&buffer[..n]);
+                    }
+                    let request_line = headers.lines().next().unwrap().to_string();
+                    let is_end = request_line.contains("/sportRecord/sport/end/");
+                    let (status, body) = if request_line.contains("/setting/getRule") {
+                        ("200 OK", r#"{"code":10200,"data":{"minPace":"4","maxPace":"7.5","raceMile":"2000"}}"#)
+                    } else if request_line.contains("/sportRecord/sport/start2") {
+                        ("200 OK", r#"{"code":10200,"data":"test-record"}"#)
+                    } else if request_line.contains("/sportRecord/info/") {
+                        if scenario == "stop_during_info" {
+                            server_cancel.store(true, Ordering::SeqCst);
+                            ("500 Internal Server Error", "error")
+                        } else {
+                            ("200 OK", r#"{"code":10200,"data":{"points":[]}}"#)
+                        }
+                    } else if request_line.contains("/sportRecord/point/saveListByNo") {
+                        let json: serde_json::Value = serde_json::from_slice(&bytes[header_end..header_end + length]).unwrap();
+                        let points = json["sportPointList"].as_array().unwrap();
+                        assert!((2..=POINT_BATCH).contains(&points.len()));
+                        if scenario == "stop_during_upload" {
+                            server_cancel.store(true, Ordering::SeqCst);
+                        }
+                        ("200 OK", r#"{"code":10200,"data":{}}"#)
+                    } else if is_end {
+                        assert_eq!(content_length, Some(0));
+                        if scenario == "waf" { ("403 Forbidden", "<title>waf blocked</title>") }
+                        else { ("200 OK", r#"{"code":10200}"#) }
+                    } else { panic!("unexpected request: {request_line}"); };
+                    requests.push(request_line);
+                    write!(stream, "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).unwrap();
+                    if is_end { return requests; }
+                }
+            });
+            let mut api = Api::new();
+            api.test_base = Some(format!("http://{address}"));
+            let area = Area {
+                place_name: "test".into(), place_code: "test".into(),
+                fence: vec![(29.53,106.60),(29.53,106.602),(29.532,106.602),(29.532,106.60)],
+                excludes: vec![], fence_vertices: 4, ban_count: 0,
+            };
+            let states = std::cell::RefCell::new(Vec::new());
+            let logs = std::cell::RefCell::new(Vec::new());
+            run(&mut api, &area, 345.0, 5.0, 0.0, 42, 20.0, false, &cancel,
+                &|s| states.borrow_mut().push(s), &|s| logs.borrow_mut().push(s));
+            let requests = server.join().unwrap();
+            let states = states.into_inner();
+            let final_state = states.last().unwrap();
+            assert_eq!(requests.iter().filter(|r| r.contains("/sportRecord/sport/end/")).count(), 1);
+            if scenario == "waf" {
+                assert!(final_state.failed && !final_state.finished);
+                assert!(logs.into_inner().iter().any(|line| line.contains("403")));
+            } else {
+                assert!(final_state.finished && !final_state.failed);
+                if scenario.starts_with("stop_during_") {
+                    assert_eq!(final_state.phase, "已停止并结算");
+                }
+                if scenario == "stop_during_info" {
+                    assert!(!requests.iter().any(|r| r.contains("saveListByNo")));
+                }
+            }
+        }
+    }
 
     #[test]
     fn batches_match_v2_limit_and_preserve_all_points() {

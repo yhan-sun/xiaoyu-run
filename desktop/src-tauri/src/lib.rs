@@ -564,10 +564,9 @@ fn start_run(
     let pace_sec = parse_pace(&req.pace).ok_or("配速格式无效")?;
     let km = parse_dist(&req.dist).ok_or("距离格式无效")?;
     st.openid = req.openid.trim().to_string();
-    drop(st);
-
     cancel_for_thread.store(false, Ordering::SeqCst);
     _active_for_thread.store(true, Ordering::SeqCst);
+    drop(st);
 
     let oid = req.openid.trim().to_string();
 

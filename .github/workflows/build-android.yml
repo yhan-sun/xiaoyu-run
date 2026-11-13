@@ -149,15 +149,16 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.4-android
-          name: "小雨run v3.2.4 · Android"
+          tag_name: v3.2.5-android
+          name: "小雨run v3.2.5 · Android"
           body: |
-            小雨run v3.2.4（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.5（Rust + Tauri 重写）· Android arm64 版
 
             #### 本版更新
-            - 结束记录的空 POST 明确发送零长度正文，与旧版 Android 的请求格式对齐；服务器是否接受仍需测试。
-            - 风华参考公开地图调整跑道中心，并调整轨迹漂移；两座场地保留七道，坐标均为估计而非实测。
-            - 如果服务端返回 HTTP 403 拦截，结算仍未确认，请以官方小程序为准；此修复能否消除 403 尚需验证。
+            - 点击停止时，如果查询已有记录的请求仍在进行，即使该查询失败也会尝试结算已知记录。
+            - 修复连续启动时可能出现的并发问题；模拟测试覆盖正常结算、停止及 403 响应。
+            - HTTP 403 的服务端拦截原因仍未确认，无法保证结算成功；收到 403 时请在官方小程序检查记录。
+            - 两座场地的七道跑道为地图与围栏估算，并非实测坐标。
 
             #### 适用机型
             仅 arm64（arm64-v8a），覆盖 2016 年后几乎所有安卓手机。

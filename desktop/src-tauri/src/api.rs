@@ -179,6 +179,8 @@ pub struct Api {
     pub token: String,
     pub last_error: String,
     pub trace: Vec<String>,
+    #[cfg(test)]
+    pub(crate) test_base: Option<String>,
 }
 
 impl Default for Api {
@@ -193,7 +195,17 @@ impl Api {
             token: String::new(),
             last_error: String::new(),
             trace: Vec::new(),
+            #[cfg(test)]
+            test_base: None,
         }
+    }
+
+    fn base(&self) -> &str {
+        #[cfg(test)]
+        if let Some(base) = &self.test_base {
+            return base;
+        }
+        BASE
     }
 
     pub fn reset(&mut self, openid: &str) {
@@ -281,15 +293,15 @@ impl Api {
             .map(|(k, v)| format!("{}={}", enc(k), enc(v)))
             .collect();
         let url = if qs.is_empty() {
-            format!("{}{}", BASE, path)
+            format!("{}{}", self.base(), path)
         } else {
-            format!("{}{}{}{}", BASE, path, if path.contains('?') { "&" } else { "?" }, qs.join("&"))
+            format!("{}{}{}{}", self.base(), path, if path.contains('?') { "&" } else { "?" }, qs.join("&"))
         };
         self.call("GET", &url, None, use_token)
     }
 
     fn post(&mut self, path: &str, body: Option<&str>, use_token: bool) -> Option<Value> {
-        self.call("POST", &format!("{}{}", BASE, path), body, use_token)
+        self.call("POST", &format!("{}{}", self.base(), path), body, use_token)
     }
 
     // ---------------------------------------------------------- 业务
