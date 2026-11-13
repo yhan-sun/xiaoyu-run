@@ -130,27 +130,30 @@ export interface Config {
   theme: string;
   keepAwake: boolean;
   lastStats: Stats | null;
+  lastStatsSyncAt: string | null;
 }
 
 export const DEFAULT_CONFIG: Config = {
   openid: "",
   pace: "5:45",
   dist: "2.0",
-  noise: 0.6,
+  noise: 1.5,
   burrs: true,
   seed: 0,
   placeCode: "",
   theme: "dark",
   keepAwake: true,
   lastStats: null,
+  lastStatsSyncAt: null,
 };
 
 // ---------------------------------------------------------------- 格式化
 
 export function fmtPace(sec: number): string {
   if (!sec || sec <= 0 || sec > 3600) return "--";
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
+  const rounded = Math.round(sec);
+  const m = Math.floor(rounded / 60);
+  const s = rounded % 60;
   return `${m}'${String(s).padStart(2, "0")}"`;
 }
 

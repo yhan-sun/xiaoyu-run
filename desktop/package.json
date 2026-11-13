@@ -1,11 +1,12 @@
 {
   "name": "xiaoyu-run",
   "private": true,
-  "version": "3.2.6",
+  "version": "3.2.7",
   "type": "module",
   "description": "小雨run · 校园运动客户端（Rust + Tauri）",
   "scripts": {
     "dev": "vite",
+    "test": "node --test tests/*.test.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",

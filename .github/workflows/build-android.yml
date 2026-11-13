@@ -84,6 +84,10 @@ jobs:
         working-directory: desktop
         run: npm run build
 
+      - name: Frontend status tests
+        working-directory: desktop
+        run: npm test
+
       - name: Rust unit tests
         working-directory: desktop/src-tauri
         run: cargo test --quiet
@@ -149,14 +153,16 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.6-android
-          name: "小雨run v3.2.6 · Android"
+          tag_name: v3.2.7-android
+          name: "小雨run v3.2.7 · Android"
           body: |
-            小雨run v3.2.6（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.7（Rust + Tauri 重写）· Android arm64 版
 
             #### 本版更新
-            - 更新应用图标，使用清新的蓝绿渐变、跑道与雨滴设计。
-            - 与 3.2.5 使用相同签名，可直接覆盖安装以保留本机数据；请不要卸载旧版。
+            - 优化配置引导、成绩空状态与结算提示；场地选择和高级设置改为圆角样式。
+            - GPS 抖动默认值为 1.5，可调范围为 0～3；已有保存值保持不变。
+            - 成绩显示上次同步时间；电脑端仅在主动点击后扫描本机微信缓存。
+            - 与 3.2.6 使用相同签名，可直接覆盖安装以保留本机数据；请不要卸载旧版。
             - HTTP 403 的服务端拦截原因仍未确认，无法保证结算成功；收到 403 时请在官方小程序检查记录。
             - 两座场地的七道跑道为地图与围栏估算，并非实测坐标。
 

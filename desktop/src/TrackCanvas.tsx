@@ -93,7 +93,7 @@ export default function TrackCanvas({ preview, running, progress, height = 210 }
       ctx.font = "500 13px -apple-system, BlinkMacSystemFont, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(p?.message || "同步场地后即可生成真实轨迹", w / 2, h / 2);
+      ctx.fillText(p?.message || "场地就绪后显示轨迹预览", w / 2, h / 2);
       return;
     }
 

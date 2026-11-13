@@ -799,6 +799,9 @@ mod parse_tests {
                         }
                         Err(err) => panic!("mock accept: {err}"),
                     };
+                    // On some platforms accepted sockets inherit the listener's
+                    // nonblocking mode. Read complete requests with a timeout.
+                    stream.set_nonblocking(false).unwrap();
                     stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
                     let mut bytes = Vec::new();
                     let mut buffer = [0; 4096];

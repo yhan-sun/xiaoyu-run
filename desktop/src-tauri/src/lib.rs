@@ -32,6 +32,7 @@ pub struct Config {
     /// 上次拉到的成绩，启动时直接渲染，不必每次点刷新
     #[serde(default)]
     pub last_stats: Option<run::Stats>,
+    pub last_stats_sync_at: Option<String>,
 }
 
 impl Default for Config {
@@ -40,13 +41,14 @@ impl Default for Config {
             openid: String::new(),
             pace: "5:45".into(),
             dist: "2.0".into(),
-            noise: 0.6,
+            noise: 1.5,
             burrs: true,
             seed: 0,
             place_code: String::new(),
             theme: "system".into(),
             keep_awake: true,
             last_stats: None,
+            last_stats_sync_at: None,
         }
     }
 }
@@ -62,12 +64,26 @@ mod config_tests {
         assert_eq!(config.openid, "test-id");
         assert_eq!(config.place_code, "T1001");
         assert_eq!(config.last_stats.as_ref().unwrap().total, 1);
+        assert_eq!(config.noise, 1.5);
+        assert_eq!(config.last_stats_sync_at, None);
         assert!(config.keep_awake);
         config.keep_awake = false;
+        config.noise = 3.0;
+        config.last_stats_sync_at = Some("2026-11-13T08:30:00.000Z".into());
         let saved = serde_json::to_string(&config).unwrap();
         let restored: Config = serde_json::from_str(&saved).unwrap();
         assert!(!restored.keep_awake);
+        assert_eq!(restored.noise, 3.0);
+        assert_eq!(restored.last_stats_sync_at.as_deref(), Some("2026-11-13T08:30:00.000Z"));
         assert_eq!(restored.last_stats.unwrap().total, 1);
+    }
+
+    #[test]
+    fn jitter_default_does_not_overwrite_an_existing_preference() {
+        let fresh: Config = serde_json::from_str("{}").unwrap();
+        let existing: Config = serde_json::from_str(r#"{"noise":0.6}"#).unwrap();
+        assert_eq!(fresh.noise, 1.5);
+        assert_eq!(existing.noise, 0.6);
     }
 }
 

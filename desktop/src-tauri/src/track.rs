@@ -352,7 +352,7 @@ pub fn generate_for_place(
             let mut coords = Vec::with_capacity(n);
             for i in 0..n {
                 let (p, heading) = point_at(&dense, &cum, travelled);
-                let intensity = noise.clamp(0.0, 2.0) * if burrs { 1.0 } else { 0.5 };
+                let intensity = noise.clamp(0.0, 3.0) * if burrs { 1.0 } else { 0.5 };
                 // Bounded correlated GPS drift, distinct from actual lane
                 // changes. This adds modest variation without sudden jumps.
                 lateral = (0.96 * lateral + rng.uniform(-0.55, 0.55) * intensity).clamp(-1.5, 1.5);
@@ -1454,6 +1454,19 @@ mod tests {
         assert!(max_difference > 0.5, "GPS jitter has no visible effect");
         assert_eq!(noisy.points.len(), again.points.len());
         assert!(noisy.points.iter().zip(&again.points).all(|(a, b)| a.lat == b.lat && a.lon == b.lon));
+    }
+
+    #[test]
+    fn upper_jitter_range_changes_both_tracks_and_stays_in_bounds() {
+        for (code, fence, bans) in stadium_fixtures() {
+            let ctx = Fence { fence: &fence, excludes: &bans };
+            let make = |noise| generate_for_place(code, &fence, &bans, 345.0, 2000.0, noise, 42, 20.0, true).unwrap();
+            let at_two = make(2.0);
+            let at_three = make(3.0);
+            assert!(at_three.in_window());
+            assert!(at_three.points.iter().all(|p| ctx.valid(p.lat, p.lon)));
+            assert!(at_two.points.iter().zip(&at_three.points).any(|(a, b)| geo::hav(a.lat, a.lon, b.lat, b.lon) > 0.1));
+        }
     }
 
     #[test]
