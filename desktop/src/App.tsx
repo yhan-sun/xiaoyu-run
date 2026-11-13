@@ -123,6 +123,7 @@ export default function App() {
 
   const loadedRef = useRef(false);
   const saveTimer = useRef(0);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
   const running = !!run && !run.finished && !run.failed;
 
@@ -166,12 +167,27 @@ export default function App() {
   // ---------- 配置读写 ----------
   useEffect(() => {
     void (async () => {
-      const cfg = await call<Config>("load_config");
-      const merged = { ...DEFAULT_CONFIG, ...(cfg ?? {}) };
-      setConfig(merged);
-      setOpenidText(merged.openid);
-      if (merged.lastStats) setStats(merged.lastStats);
-      loadedRef.current = true;
+      try {
+        const cfg = await call<Config>("load_config");
+        const merged = { ...DEFAULT_CONFIG, ...(cfg ?? {}) };
+        setConfig(merged);
+        setOpenidText(merged.openid);
+        if (merged.lastStats) setStats(merged.lastStats);
+        loadedRef.current = true;
+        try {
+          const imported = await call<string | null>("take_imported_openid");
+          if (imported) {
+            const clean = sanitizeOpenid(imported);
+            setOpenidText(clean);
+            setConfig((c) => ({ ...c, openid: clean }));
+            Toast.show({ content: "已从电脑导入 OpenID" });
+          }
+        } catch {
+          /* optional import is unavailable on some platforms */
+        }
+      } catch (e) {
+        Toast.show({ icon: "fail", content: `读取配置失败：${String(e)}` });
+      }
     })();
   }, []);
 
@@ -183,7 +199,13 @@ export default function App() {
     if (!loadedRef.current) return;
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
-      void call("save_config", { config }).catch(() => undefined);
+      saveQueue.current = saveQueue.current.then(async () => {
+        try {
+          await call("save_config", { config });
+        } catch (e) {
+          Toast.show({ icon: "fail", content: `保存配置失败：${String(e)}` });
+        }
+      });
     }, 400);
   }, [config]);
 
@@ -254,17 +276,6 @@ export default function App() {
       try {
         const p = await call<PowerStatus>("power_status");
         if (p) setPower(p);
-      } catch {
-        /* ignore */
-      }
-      try {
-        const imported = await call<string | null>("take_imported_openid");
-        if (imported) {
-          const clean = sanitizeOpenid(imported);
-          setOpenidText(clean);
-          update({ openid: clean });
-          Toast.show({ content: "已从电脑导入 OpenID" });
-        }
       } catch {
         /* ignore */
       }

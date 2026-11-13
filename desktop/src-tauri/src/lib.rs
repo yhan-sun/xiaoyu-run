@@ -28,6 +28,7 @@ pub struct Config {
     pub seed: i64,
     pub place_code: String,
     pub theme: String,
+    pub keep_awake: bool,
     /// 上次拉到的成绩，启动时直接渲染，不必每次点刷新
     #[serde(default)]
     pub last_stats: Option<run::Stats>,
@@ -44,8 +45,29 @@ impl Default for Config {
             seed: 0,
             place_code: String::new(),
             theme: "system".into(),
+            keep_awake: true,
             last_stats: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod config_tests {
+    use super::Config;
+
+    #[test]
+    fn upgrades_older_configuration_and_preserves_cached_stats() {
+        let old = r#"{"openid":"test-id","placeCode":"T1001","lastStats":{"total":1,"validCount":1,"invalidCount":0,"totalKm":2.0,"avgPaceSecKm":345.0,"byPlace":[["test",1]],"rows":[]}}"#;
+        let mut config: Config = serde_json::from_str(old).unwrap();
+        assert_eq!(config.openid, "test-id");
+        assert_eq!(config.place_code, "T1001");
+        assert_eq!(config.last_stats.as_ref().unwrap().total, 1);
+        assert!(config.keep_awake);
+        config.keep_awake = false;
+        let saved = serde_json::to_string(&config).unwrap();
+        let restored: Config = serde_json::from_str(&saved).unwrap();
+        assert!(!restored.keep_awake);
+        assert_eq!(restored.last_stats.unwrap().total, 1);
     }
 }
 
@@ -125,20 +147,29 @@ struct ConnectResult {
 }
 
 #[tauri::command]
-fn load_config(app: tauri::AppHandle) -> Config {
-    let Ok(p) = config_path(&app) else {
-        return Config::default();
-    };
-    std::fs::read_to_string(p)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+fn load_config(app: tauri::AppHandle) -> Result<Config, String> {
+    let p = config_path(&app)?;
+    match std::fs::read_to_string(p) {
+        Ok(s) => serde_json::from_str(&s).map_err(|e| format!("配置读取失败：{}", e)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Config::default()),
+        Err(e) => Err(format!("配置读取失败：{}", e)),
+    }
 }
 
 #[tauri::command]
 fn save_config(app: tauri::AppHandle, config: Config) -> Result<(), String> {
+    static SAVE_LOCK: Mutex<()> = Mutex::new(());
+    let _guard = SAVE_LOCK.lock().map_err(|_| "配置写入锁失败")?;
     let p = config_path(&app)?;
     let s = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    // Write alongside the original so an interrupted write cannot truncate it.
+    #[cfg(not(target_os = "windows"))]
+    {
+        let tmp = p.with_extension("json.tmp");
+        std::fs::write(&tmp, s).map_err(|e| e.to_string())?;
+        std::fs::rename(&tmp, &p).map_err(|e| e.to_string())
+    }
+    #[cfg(target_os = "windows")]
     std::fs::write(p, s).map_err(|e| e.to_string())
 }
 
