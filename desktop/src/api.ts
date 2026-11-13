@@ -141,7 +141,7 @@ export const DEFAULT_CONFIG: Config = {
   burrs: true,
   seed: 0,
   placeCode: "",
-  theme: "dark",
+  theme: "system",
   keepAwake: true,
   lastStats: null,
   lastStatsSyncAt: null,

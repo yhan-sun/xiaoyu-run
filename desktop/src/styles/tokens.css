@@ -1,0 +1,173 @@
+/* ============================================================================
+   小雨run · semantic design tokens
+   Light and dark are designed independently; dark is never a simple inversion.
+   ========================================================================= */
+
+:root {
+  /* ---- surfaces ------------------------------------------------------- */
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-2: #f1f3f6;
+  --surface-3: #e9edf2;
+  --scrim: rgba(15, 20, 30, 0.32);
+  --scanner-shade: rgba(0, 0, 0, 0.68);
+  --scanner-mask: rgba(0, 0, 0, 0.3);
+  --scanner-ink: #ffffff;
+
+  /* ---- ink ------------------------------------------------------------ */
+  --text: #171a21;
+  --text-2: #6e7480;
+  --text-3: #8a909b;
+
+  /* ---- brand / semantics ---------------------------------------------- */
+  --accent: #087cfa;
+  --accent-strong: #0669d8;
+  --accent-soft: #eaf3ff;
+  --accent-ink: #0666d6;
+
+  --success: #16a38a;
+  --success-soft: #e8f6f2;
+  --success-ink: #0c7f6b;
+
+  --warning: #d79526;
+  --warning-soft: #fbf3e4;
+  --warning-ink: #9c6810;
+
+  --danger: #d94a4a;
+  --danger-soft: #fcedec;
+  --danger-ink: #b33535;
+
+  --neutral-soft: #f1f3f6;
+  --neutral-ink: #626875;
+
+  /* ---- lines ---------------------------------------------------------- */
+  --border: rgba(18, 24, 38, 0.07);
+  --border-strong: rgba(18, 24, 38, 0.12);
+  --border-focus: rgba(8, 124, 250, 0.55);
+
+  /* ---- depth ---------------------------------------------------------- */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.035),
+    0 16px 40px -32px rgba(16, 24, 40, 0.24);
+  --shadow-float: 0 18px 50px -24px rgba(16, 24, 40, 0.28),
+    0 2px 8px rgba(16, 24, 40, 0.05);
+  --shadow-press: 0 1px 2px rgba(16, 24, 40, 0.08);
+
+  /* ---- data / track --------------------------------------------------- */
+  --track-bg: #ffffff;
+  --track-grid: rgba(18, 24, 38, 0.055);
+  --track-bed: rgba(18, 24, 38, 0.028);
+  --track-line: rgba(18, 24, 38, 0.2);
+  --track-poi: #ffffff;
+
+  /* ---- typography ----------------------------------------------------- */
+  --font-sans: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+
+  --text-display: clamp(56px, 13vw, 88px);
+  --text-large: 30px;
+  --text-title: 22px;
+  --text-section: 17px;
+  --text-body: 15px;
+  --text-sub: 13px;
+  --text-caption: 12px;
+  --text-micro: 10.5px;
+
+  /* ---- space ---------------------------------------------------------- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+  --s12: 48px;
+
+  --page-pad: 20px;
+  --control-h: 48px;
+  --radius-card: 16px;
+  --radius-hero: 18px;
+  --radius-control: 13px;
+  --radius-small: 10px;
+  --radius-pill: 999px;
+
+  /* ---- motion --------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast: 140ms;
+  --dur-page: 230ms;
+  --dur-layout: 280ms;
+
+  /* ---- antd-mobile bridge (Toast etc. if used) ------------------------ */
+  --adm-color-primary: var(--accent);
+  --adm-color-success: var(--success);
+  --adm-color-warning: var(--warning);
+  --adm-color-danger: var(--danger);
+  --adm-color-background: var(--bg);
+  --adm-color-box: var(--surface);
+  --adm-color-text: var(--text);
+  --adm-color-text-secondary: var(--text-2);
+  --adm-color-weak: var(--text-2);
+  --adm-color-light: var(--text-3);
+  --adm-color-border: var(--border);
+  --adm-color-fill-content: var(--surface-2);
+  --adm-font-family: var(--font-sans);
+
+  color-scheme: light;
+}
+
+html[data-prefers-color-scheme="dark"] {
+  --bg: #0c0e12;
+  --surface: #171a20;
+  --surface-2: #20242c;
+  --surface-3: #282d36;
+  --scrim: rgba(0, 0, 0, 0.58);
+
+  --text: #f5f6f8;
+  --text-2: #969ba6;
+  --text-3: #7a808c;
+
+  --accent: #439aff;
+  --accent-strong: #6cb2ff;
+  --accent-soft: rgba(67, 154, 255, 0.14);
+  --accent-ink: #8cc4ff;
+
+  --success: #37bfa2;
+  --success-soft: rgba(55, 191, 162, 0.13);
+  --success-ink: #6bd8c0;
+
+  --warning: #e0a63c;
+  --warning-soft: rgba(224, 166, 60, 0.13);
+  --warning-ink: #f0c471;
+
+  --danger: #ef6a6a;
+  --danger-soft: rgba(239, 106, 106, 0.13);
+  --danger-ink: #ff9b9b;
+
+  --neutral-soft: #20242c;
+  --neutral-ink: #a8aeb9;
+
+  --border: rgba(255, 255, 255, 0.075);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-focus: rgba(67, 154, 255, 0.65);
+
+  --shadow-card: none;
+  --shadow-float: 0 24px 60px -30px rgba(0, 0, 0, 0.8);
+  --shadow-press: none;
+
+  --track-bg: #171a20;
+  --track-grid: rgba(255, 255, 255, 0.055);
+  --track-bed: rgba(255, 255, 255, 0.032);
+  --track-line: rgba(255, 255, 255, 0.16);
+  --track-poi: #171a20;
+
+  color-scheme: dark;
+}
+
+@media (min-width: 960px) {
+  :root {
+    --page-pad: 40px;
+  }
+}
