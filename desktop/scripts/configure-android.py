@@ -2,6 +2,7 @@
 """Configure the generated Tauri Android project before building an APK."""
 from pathlib import Path
 import re
+import shutil
 import sys
 
 path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[1] / "src-tauri/gen/android/app/build.gradle.kts"
@@ -36,3 +37,12 @@ elif new not in text:
     raise SystemExit("Unsupported existing scanner configuration; inspect dependencies")
 path.write_text(text, encoding="utf-8")
 print(f"Configured release optimization and bundled barcode model: {path}")
+
+# android init creates a fresh native project in CI. Copy the checked-in
+# launcher resources after init so the APK uses the same approved artwork.
+icons = Path(__file__).resolve().parents[1] / "src-tauri/icons/android"
+if not (icons / "mipmap-anydpi-v26/ic_launcher.xml").is_file():
+    raise SystemExit("Missing Android launcher resources")
+resources = path.parent / "src/main/res"
+shutil.copytree(icons, resources, dirs_exist_ok=True)
+print(f"Installed Android launcher resources: {resources}")
