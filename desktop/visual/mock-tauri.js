@@ -250,7 +250,7 @@
       case "open_privacy_settings":
         return true;
       case "app_version":
-        return "3.2.9";
+        return "3.2.10";
       case "ui_probe":
         return true;
       case "plugin:event|listen": {

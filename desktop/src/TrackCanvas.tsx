@@ -19,6 +19,18 @@ interface Bounds {
   maxLon: number;
 }
 
+const PATH_CHUNK_SIZE = 64;
+
+interface Geometry {
+  preview: PreviewResult;
+  w: number;
+  h: number;
+  project: (lat: number, lon: number) => [number, number];
+  points: [number, number][];
+  chunks: Path2D[];
+  routeSize: number;
+}
+
 interface Colors {
   accent: string;
   danger: string;
@@ -73,6 +85,7 @@ function TrackCanvas({
   const baseRef = useRef<HTMLCanvasElement | null>(null);
   const baseKeyRef = useRef<{ preview: PreviewResult; w: number; h: number; colors: Colors } | null>(null);
   const sizeRef = useRef({ w: 0, h: 0 });
+  const geometryRef = useRef<Geometry | null>(null);
   const colorsRef = useRef<Colors | null>(null);
   const displayRef = useRef(progress);
   const targetRef = useRef(progress);
@@ -125,18 +138,36 @@ function TrackCanvas({
       return;
     }
 
-    const b = boundsOf([p.fence, p.points]);
-    if (!b) return;
-
-    const pad = Math.max(26, Math.min(w, h) * 0.14);
-    const cos = Math.cos((((b.minLat + b.maxLat) / 2) * Math.PI) / 180);
-    const spanLon = Math.max(1e-7, (b.maxLon - b.minLon) * cos);
-    const spanLat = Math.max(1e-7, b.maxLat - b.minLat);
-    const scale = Math.min((w - pad * 2) / spanLon, (h - pad * 2) / spanLat);
-    const project = (lat: number, lon: number): [number, number] => [
-      w / 2 + (lon - (b.minLon + b.maxLon) / 2) * cos * scale,
-      h / 2 - (lat - (b.minLat + b.maxLat) / 2) * scale,
-    ];
+    let geometry = geometryRef.current;
+    if (!geometry || geometry.preview !== p || geometry.w !== w || geometry.h !== h) {
+      const b = boundsOf([p.fence, p.points]);
+      if (!b) return;
+      const pad = Math.max(26, Math.min(w, h) * 0.14);
+      const cos = Math.cos((((b.minLat + b.maxLat) / 2) * Math.PI) / 180);
+      const spanLon = Math.max(1e-7, (b.maxLon - b.minLon) * cos);
+      const spanLat = Math.max(1e-7, b.maxLat - b.minLat);
+      const scale = Math.min((w - pad * 2) / spanLon, (h - pad * 2) / spanLat);
+      const project = (lat: number, lon: number): [number, number] => [
+        w / 2 + (lon - (b.minLon + b.maxLon) / 2) * cos * scale,
+        h / 2 - (lat - (b.minLat + b.maxLat) / 2) * scale,
+      ];
+      const points = p.points.map(([lat, lon]) => project(lat, lon));
+      // Cache fixed-size paths instead of rebuilding all completed segments
+      // in JavaScript on every animation frame.
+      const chunks: Path2D[] = [];
+      for (let start = 0; start + PATH_CHUNK_SIZE < points.length; start += PATH_CHUNK_SIZE) {
+        const path = new Path2D();
+        path.moveTo(...points[start]);
+        for (let i = start + 1; i <= start + PATH_CHUNK_SIZE; i++) {
+          path.lineTo(...points[i]);
+        }
+        chunks.push(path);
+      }
+      geometry = { preview: p, w, h, project, points, chunks,
+        routeSize: Math.hypot(spanLon * scale, spanLat * scale) };
+      geometryRef.current = geometry;
+    }
+    const { project, points, chunks, routeSize } = geometry;
 
     // The fence and route preview only change with geometry, size or theme.
     // Keep them on a separate layer while progress is interpolated above it.
@@ -182,18 +213,17 @@ function TrackCanvas({
         const trace = (end: number) => {
           bg.beginPath();
           for (let i = 0; i < end; i++) {
-            const [x, y] = project(p.points[i][0], p.points[i][1]);
+            const [x, y] = points[i];
             if (i === 0) bg.moveTo(x, y); else bg.lineTo(x, y);
           }
         };
         // One real lap provides a quiet neutral reference; all original points
         // remain visible as a faint preview and are used unchanged for progress.
-        const [sx, sy] = project(p.points[0][0], p.points[0][1]);
+        const [sx, sy] = points[0];
         let lapEnd = p.points.length;
         let departed = false;
-        const routeSize = Math.hypot(spanLon * scale, spanLat * scale);
         for (let i = 1; i < p.points.length; i++) {
-          const [x, y] = project(p.points[i][0], p.points[i][1]);
+          const [x, y] = points[i];
           const distance = Math.hypot(x - sx, y - sy);
           if (distance > routeSize * 0.3) departed = true;
           if (departed && distance < routeSize * 0.08) { lapEnd = i + 1; break; }
@@ -218,36 +248,23 @@ function TrackCanvas({
     const lastI = Math.floor(lastF);
     const progressColor = failed ? c.danger : c.accent;
 
-    if (lastI >= 1) {
-      ctx.beginPath();
-      for (let i = 0; i <= lastI; i++) {
-        const [x, y] = project(p.points[i][0], p.points[i][1]);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      if (lastI < p.points.length - 1) {
-        const t = lastF - lastI;
-        const [ax, ay] = project(p.points[lastI][0], p.points[lastI][1]);
-        const [bx, by] = project(
-          p.points[lastI + 1][0],
-          p.points[lastI + 1][1]
-        );
-        ctx.lineTo(ax + (bx - ax) * t, ay + (by - ay) * t);
-      }
+    ctx.strokeStyle = progressColor;
+    ctx.lineWidth = 2.25;
+    const completeChunks = Math.floor(lastI / PATH_CHUNK_SIZE);
+    for (let i = 0; i < completeChunks; i++) ctx.stroke(chunks[i]);
+    const start = completeChunks * PATH_CHUNK_SIZE;
+    ctx.beginPath();
+    ctx.moveTo(...points[start]);
+    for (let i = start + 1; i <= lastI; i++) ctx.lineTo(...points[i]);
 
-      ctx.strokeStyle = progressColor;
-      ctx.lineWidth = 2.25;
-      ctx.stroke();
-    }
-
-    // A single marker follows the same interpolated segment as the line.
-    const idx = Math.min(Math.max(lastI, 0), p.points.length - 1);
-    const [ax, ay] = project(p.points[idx][0], p.points[idx][1]);
-    const [bx, by] = idx + 1 < p.points.length
-      ? project(p.points[idx + 1][0], p.points[idx + 1][1]) : [ax, ay];
-    const t = lastF - idx;
+    // Draw the partial segment even before the first whole point is reached.
+    const [ax, ay] = points[lastI];
+    const [bx, by] = points[Math.min(lastI + 1, points.length - 1)];
+    const t = lastF - lastI;
     const px = ax + (bx - ax) * t;
     const py = ay + (by - ay) * t;
+    ctx.lineTo(px, py);
+    ctx.stroke();
 
     ctx.beginPath();
     ctx.arc(px, py, 6, 0, Math.PI * 2);
@@ -264,11 +281,12 @@ function TrackCanvas({
 
   const startLoop = useCallback(() => {
     if (rafRef.current) return;
+    lastTsRef.current = 0;
     const tick = (ts: number) => {
       const target = targetRef.current;
       const current = displayRef.current;
       const diff = target - current;
-      if (Math.abs(diff) < 0.00035) {
+      if (Math.abs(diff) < 0.000001) {
         displayRef.current = target;
         draw();
         lastTsRef.current = ts;
@@ -276,7 +294,7 @@ function TrackCanvas({
         return;
       }
       const dt = lastTsRef.current ? Math.min(48, ts - lastTsRef.current) : 16;
-      const factor = 1 - Math.pow(0.88, dt / 16);
+      const factor = 1 - Math.exp(-dt / 220);
       displayRef.current = current + diff * factor;
       lastTsRef.current = ts;
       draw();
@@ -304,6 +322,8 @@ function TrackCanvas({
     const apply = () => {
       reducedRef.current = mq.matches;
       if (mq.matches) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
         displayRef.current = targetRef.current;
         draw();
       }
@@ -373,7 +393,7 @@ function TrackCanvas({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
     };
-  }, []);
+  }, [draw]);
 
   const empty = !preview || !preview.ok || preview.points.length < 2;
 
