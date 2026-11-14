@@ -153,15 +153,15 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.8-android
-          name: "小雨run v3.2.8 · Android"
+          tag_name: v3.2.9-android
+          name: "小雨run v3.2.9 · Android"
           body: |
-            小雨run v3.2.8（Rust + Tauri 重写）· Android arm64 版
+            小雨run v3.2.9（Rust + Tauri 重写）· Android arm64 版
 
             #### 本版更新
-            - 运动、成绩、指南与设置页面视觉精修，优化窄屏排版和交互反馈。
-            - 保留扫码导入、记录状态确认和场地轨迹功能。
-            - 与 3.2.7 使用相同签名，可直接覆盖安装以保留本机数据；请不要卸载旧版。
+            - 精简成绩、指南和设置页面的重复信息，优化按钮反馈与深浅色显示。
+            - 修正运动页配速标签，避免将目标配速误认为实时配速。
+            - 与 3.2.8 使用相同签名，可直接覆盖安装以保留本机数据；请不要卸载旧版。
             - 服务端拦截原因仍未确认，结算未确认时请在官方小程序检查记录。
             - 场地道次为地图与围栏估算，并非实测坐标。
 

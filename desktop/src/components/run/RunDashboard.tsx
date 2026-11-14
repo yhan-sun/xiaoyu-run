@@ -85,9 +85,7 @@ export function RunDashboard({
               </span>
             </div>
             <div className="run-side-stat">
-              <span className="run-side-label">
-                {running ? "当前配速" : "目标配速"}
-              </span>
+              <span className="run-side-label">目标配速</span>
               <span className="run-side-value num">
                 {fmtPace(targetPace)}
                 <em>/km</em>

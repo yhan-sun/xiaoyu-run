@@ -49,6 +49,8 @@ export function RunAction({
   const failed = !!run?.failed;
   const needsReview = !!describeRunStatus(run, stopping)?.needsReview;
   const settling = run?.phase === "结算中";
+  const hasInvalidParameters = missing.some((item) => item === "有效配速" || item === "有效距离");
+  const needsGuide = missing.some((item) => item !== "有效配速" && item !== "有效距离");
 
   const content =
     variant === "dock" ? (
@@ -65,7 +67,9 @@ export function RunAction({
                   ? "本次已中断"
                   : ready
                     ? "准备出发"
-                    : "还需完成配置"}
+                    : hasInvalidParameters && !needsGuide
+                      ? "请检查参数"
+                      : "还需完成配置"}
           </div>
           <div className="run-dock-sub num">
             {ready || running || finished || failed
@@ -78,7 +82,7 @@ export function RunAction({
 
         {needsReview ? (
           <Button variant="secondary" size="md" disabled>请先确认记录</Button>
-        ) : ready || running || finished || failed ? (
+        ) : ready || running ? (
           running ? (
             <Button
               variant="danger"
@@ -103,6 +107,8 @@ export function RunAction({
               {finished ? "再跑一次" : failed ? "重新开始" : "开始打卡"}
             </Button>
           )
+        ) : hasInvalidParameters && !needsGuide ? (
+          <Button variant="secondary" size="md" disabled>检查参数</Button>
         ) : (
           <Button
             variant="secondary"

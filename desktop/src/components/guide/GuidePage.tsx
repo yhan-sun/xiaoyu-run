@@ -101,9 +101,7 @@ export function GuidePage({
   return (
     <div className="page guide-page">
       <PageHeader
-        eyebrow="初始配置"
         title="指南"
-        description="一次配置，之后直接开跑"
       />
 
       <div className="guide-layout">

@@ -308,8 +308,6 @@
     transform 160ms var(--ease-out);
 }
 
-.btn:active:not(:disabled) { transform: scale(0.96); }
-
 .btn--full {
   width: 100%;
 }
@@ -1986,16 +1984,10 @@ html[data-prefers-color-scheme="dark"] .progress {
 .validity-legend {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
   margin-top: 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-2);
-}
-
-.validity-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .validity-rate {
@@ -2043,13 +2035,6 @@ html[data-prefers-color-scheme="dark"] .progress {
 
 .stats-empty-wrap {
   margin-top: 18px;
-}
-
-.empty-footnote {
-  text-align: center;
-  font-size: 10.5px;
-  color: var(--text-3);
-  padding: 0 20px 22px;
 }
 
 .stats-empty-wrap .empty-state {
@@ -3078,68 +3063,6 @@ html[data-prefers-color-scheme="dark"] .progress {
   border-color: var(--border-focus);
 }
 
-.about-card {
-  overflow: hidden;
-}
-
-.about-brand {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 18px;
-}
-
-.about-mark {
-  width: 50px;
-  height: 50px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: var(--surface-2);
-  color: var(--accent);
-  flex: none;
-}
-
-.about-brand-copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.about-name {
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.about-tagline {
-  margin-top: 1px;
-  font-size: 10.5px;
-  color: var(--text-2);
-}
-
-.about-version {
-  font-size: 11px;
-  color: var(--text-2);
-  flex: none;
-}
-
-.about-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 18px;
-  border-top: 1px solid var(--border);
-  font-size: 10px;
-  color: var(--text-3);
-}
-
-.about-dot {
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: var(--text-3);
-}
-
 .settings-footnote {
   margin-top: 26px;
   text-align: center;
@@ -3522,16 +3445,17 @@ html[data-prefers-color-scheme="dark"] .progress {
     align-items: center;
     gap: 9px;
     margin-top: 20px;
-    padding: 11px 12px;
-    border-radius: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--text-2);
     text-align: left;
-    min-height: 56px;
+    min-height: 48px;
+    transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out);
   }
 
   .sidebar-status:hover {
-    border-color: var(--border-strong);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   .sidebar-status-dot {

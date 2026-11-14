@@ -79,8 +79,8 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.8-win
-          name: "小雨run v3.2.8 · Windows（电脑端取码）"
+          tag_name: v3.2.9-win
+          name: "小雨run v3.2.9 · Windows（电脑端取码）"
           body: |
             小雨run 电脑端 · Windows
 

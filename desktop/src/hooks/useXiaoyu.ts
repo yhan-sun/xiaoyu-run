@@ -42,7 +42,7 @@ export function useXiaoyu() {
   const [power, setPower] = useState<PowerStatus | null>(null);
   const [extract, setExtract] = useState<ExtractResult | null>(null);
   const [openidText, setOpenidText] = useState("");
-  const [version, setVersion] = useState("3.2.8");
+  const [version, setVersion] = useState("3.2.9");
 
   const [configLoaded, setConfigLoaded] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);

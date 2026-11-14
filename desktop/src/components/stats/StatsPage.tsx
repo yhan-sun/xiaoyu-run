@@ -33,9 +33,7 @@ export function StatsPage({
   return (
     <div className="page stats-page">
       <PageHeader
-        eyebrow="训练记录"
         title="成绩"
-        description="累计里程、判定结果与本机同步状态"
         actions={hasData ? (
           <Button
             variant="secondary"
@@ -98,12 +96,7 @@ export function StatsPage({
               </section>
 
               <section className="stats-section">
-                <SectionHeader
-                  title="最近记录"
-                  action={
-                    <span className="section-meta num">{stats.rows.length} 条</span>
-                  }
-                />
+                <SectionHeader title="最近记录" />
                 <RecordList rows={stats.rows} />
               </section>
             </div>
@@ -132,11 +125,11 @@ export function StatsPage({
         <div className="stats-empty-wrap">
           <EmptyState
             icon={<IconTrack size={28} />}
-            title="成绩会在这里生长"
+            title="还没有成绩"
             description={
               hasOpenid
-                ? "同步本机账号的成绩后，这里会显示累计里程、场地分布和每一次判定。"
-                : "先在指南里填入 OpenID 并同步场地，成绩才能从校园跑服务端读取。"
+                ? "同步后查看里程与记录。"
+                : "先完成身份配置，再同步成绩。"
             }
             action={
               hasOpenid ? (
@@ -156,9 +149,6 @@ export function StatsPage({
               )
             }
           />
-          <p className="empty-footnote">
-            成绩只保存在本机配置缓存中，不会上传到第三方。
-          </p>
         </div>
       )}
     </div>

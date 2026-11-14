@@ -14,7 +14,7 @@
 |---|---|---|---|
 | **取码工具** | Windows | 读取微信缓存，显示 OpenID 和二维码 | [xiaoyu-run.exe](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.1.0-win) |
 | **电脑端界面版** | Windows / macOS | 可视化取码 + 打卡参数预览 | [安装包](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.1.0-win) |
-| **手机端** | Android 7.0+ · arm64 | 扫码或输入 → 生成轨迹 → 打卡（React + Motion 设计系统） | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.2.8-android) |
+| **手机端** | Android 7.0+ · arm64 | 扫码或输入 → 生成轨迹 → 打卡（React + Motion 设计系统） | [Android APK](https://github.com/yhan-sun/xiaoyu-run/releases/tag/v3.2.9-android) |
 
 **为什么必须分成两半**：微信把小程序数据放在手机的应用私有目录
 （`/data/data/com.tencent.mm`），未 root 的手机读不到 —— 这是 Android 沙箱，不是工具问题。

@@ -76,17 +76,8 @@ export function StatsOverview({ stats, lastSync, loading }: StatsOverviewProps) 
             />
           </div>
           <div className="validity-legend">
-            <span>
-              <i className="legend-dot legend-dot--valid" />
-              有效 {stats.validCount}
-            </span>
-            <span>
-              <i className="legend-dot legend-dot--invalid" />
-              未通过 {stats.invalidCount}
-            </span>
-            <span className="validity-rate num">
-              {total > 0 ? Math.round(validRatio * 100) : 0}%
-            </span>
+            <span>有效率</span>
+            <span className="validity-rate num">{Math.round(validRatio * 100)}%</span>
           </div>
         </div>
       ) : (

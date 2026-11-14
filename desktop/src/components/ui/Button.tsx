@@ -51,7 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           .join(" ")}
         disabled={inactive}
         aria-busy={loading || undefined}
-        whileTap={reduced || inactive ? undefined : { scale: 0.975 }}
+        whileTap={reduced || inactive ? undefined : { scale: 0.96 }}
         transition={{ type: "spring", stiffness: 520, damping: 34, mass: 0.6 }}
         {...rest}
       >

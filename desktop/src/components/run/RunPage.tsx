@@ -66,7 +66,7 @@ export function RunPage({
     ? `${area.placeCode}${area.banCount > 0 ? ` · ${area.banCount} 处禁跑区` : " · 围栏已同步"}`
     : areas.length
       ? "选择一个已同步的场地开始"
-      : "完成身份配置并同步场地后，会按真实围栏生成轨迹";
+      : "完成配置后同步场地";
 
   return (
     <div className="page run-page">

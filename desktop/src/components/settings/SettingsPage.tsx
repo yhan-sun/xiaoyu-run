@@ -57,9 +57,7 @@ export function SettingsPage({
       ? running
         ? "打卡中 · 请勿切走或锁屏"
         : "切到后台可能被系统挂起"
-      : power
-        ? `系统休眠设定：${power.sleepMinutes == null ? "从不" : `${power.sleepMinutes} 分钟`}`
-        : "读取系统电源状态…";
+      : power ? undefined : "读取系统电源状态…";
 
   return (
     <div className="page settings-page">
@@ -221,23 +219,13 @@ export function SettingsPage({
 
         <section className="settings-section">
           <div className="settings-section-title">关于</div>
-          <Card className="about-card" padded={false}>
-            <div className="about-brand">
-              <span className="about-mark">
-                <BrandMark size={42} />
-              </span>
-              <div className="about-brand-copy">
-                <div className="about-name">小雨run</div>
-                <div className="about-tagline">校园运动客户端 · 本地轨迹引擎</div>
-              </div>
-              <span className="about-version num">v{version}</span>
-            </div>
-            <div className="about-meta">
-              <span>Rust + Tauri</span>
-              <span className="about-dot" />
-              <span>协议与轨迹全部本地完成</span>
-            </div>
-          </Card>
+          <SettingsGroup aria-label="关于">
+            <SettingsRow
+              icon={<BrandMark size={20} />}
+              title="小雨run"
+              control={<span className="settings-value num">v{version}</span>}
+            />
+          </SettingsGroup>
         </section>
 
         <div className="settings-footnote">

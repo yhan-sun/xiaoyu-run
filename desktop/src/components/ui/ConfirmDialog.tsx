@@ -73,7 +73,7 @@ export function ConfirmDialog({
           initial={reduced ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.16 }}
+          transition={{ duration: reduced ? 0 : 0.16 }}
         >
           <button
             type="button"

@@ -9,7 +9,7 @@
 | 项 | 内容 |
 |---|---|
 | 名称 | 小雨run（XiaoYu Run） |
-| 版本 | v3.2.8 |
+| 版本 | v3.2.9 |
 | 技术栈 | Rust 2021 + Tauri 2 + React 18 + TypeScript + Motion |
 | 仓库 | https://github.com/yhan-sun/xiaoyu-run |
 | 目标服务 | `https://sport.cqupt.edu.cn/new_wxapp` |
